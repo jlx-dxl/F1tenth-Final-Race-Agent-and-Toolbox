@@ -10,6 +10,8 @@ from PyQt5.QtCore import Qt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from scipy.interpolate import splprep, splev
+from matplotlib.colorbar import ColorbarBase
+from matplotlib.colors import Normalize
 
 class Window(QMainWindow):
     def __init__(self):
@@ -21,8 +23,8 @@ class Window(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle("3D Curve Plotter")
-        self.setGeometry(100, 100, 1200, 600)
+        self.setWindowTitle("3D Curve Projection Plotter")
+        self.setGeometry(100, 100, 1400, 600)  # Adjusted size to accommodate color bar
 
         # Main layout and central widget
         main_layout = QGridLayout()
@@ -74,10 +76,10 @@ class Window(QMainWindow):
         buttons_layout.addWidget(save_button)
 
         # Figure and canvas
-        self.figure = Figure()
+        self.figure = Figure(figsize=(10, 5))
         self.canvas = FigureCanvas(self.figure)
-        self.ax = self.figure.add_subplot(111)  # Create an axis instance
-        main_layout.addWidget(self.canvas, 0, 1, 3, 1)  # Span all vertical and horizontal space for canvas
+        self.ax = self.figure.add_subplot(111)  # 2D projection
+        main_layout.addWidget(self.canvas, 0, 1, 3, 2)  # Adjust grid position
 
         self.load_waypoints()
 
@@ -102,7 +104,11 @@ class Window(QMainWindow):
 
     def add_point(self, x=None, y=None, z=None, w=0.5):
         point_layout = QHBoxLayout()
-        
+
+        # Label for point index
+        index_label = QLabel(f"{len(self.points) + 1}")
+        point_layout.addWidget(index_label)
+
         # Convert None or non-string values to empty strings
         x = "" if x is None or not isinstance(x, str) else x
         y = "" if y is None or not isinstance(y, str) else y
@@ -114,14 +120,14 @@ class Window(QMainWindow):
         
         w_slider = QSlider(Qt.Horizontal)
         w_slider.setMinimum(0)
-        w_slider.setMaximum(100)
-        w_slider.setValue(int(float(w) * 100))  # Ensure w is a float, scale it to slider's range
+        w_slider.setMaximum(1000)  # Adjust for resolution 0.1
+        w_slider.setValue(int(float(w) * 1000))  # Scale w to the slider's range
         w_slider.setTickPosition(QSlider.TicksBelow)
-        w_slider.setTickInterval(1)
+        w_slider.setTickInterval(100)
         
         # Display the current value of the slider for w
-        w_label = QLabel(f"{float(w):.2f}")
-        w_slider.valueChanged.connect(lambda: w_label.setText(f"{w_slider.value() / 100.0:.2f}"))
+        w_label = QLabel(f"{float(w):.1f}")
+        w_slider.valueChanged.connect(lambda: w_label.setText(f"{w_slider.value() / 1000.0:.1f}"))
 
         point_layout.addWidget(x_input)
         point_layout.addWidget(y_input)
@@ -169,16 +175,16 @@ class Window(QMainWindow):
                 x = float(x_input.text())
                 y = float(y_input.text())
                 z = float(z_input.text())
-                w = w_slider.value() / 100.0
+                w = w_slider.value() / 1000.0
                 point_data.append((x, y, z))
                 weights.append(w)
-                # Annotate waypoint with its index
-                self.ax.text(x, y, f'{i+1}', color="red", fontsize=12, ha='right')
             except ValueError:
                 continue
 
         if len(point_data) <= self.spline_order:
             self.ax.clear()
+            if hasattr(self, 'cbar'):
+                self.cbar.remove()
             self.ax.figure.canvas.draw()
             print("Please input at least", self.spline_order + 1, "valid points.")
             return
@@ -187,10 +193,27 @@ class Window(QMainWindow):
         tck, u = splprep(points.T, s=self.smoothing_factor, k=self.spline_order, per=True, w=weights)
         new_points = splev(np.linspace(0, 1, 100), tck)
         self.ax.clear()
-        self.ax.scatter(new_points[0], new_points[1], c=new_points[2], cmap='viridis')
+
+        # Remove existing colorbar if exists
+        if hasattr(self, 'cbar'):
+            self.cbar.remove()
+
+        scatter = self.ax.scatter(new_points[0], new_points[1], c=new_points[2], cmap='viridis', label='Projected Curve')
         self.ax.set_xlabel('X coordinate')
         self.ax.set_ylabel('Y coordinate')
+
+        # Adding a color bar to indicate z-values
+        self.cbar = self.figure.colorbar(scatter, ax=self.ax, orientation='vertical')
+        self.cbar.set_label('Z coordinate')
+
+        # Add waypoint indices to the plot
+        for i, (x, y, z) in enumerate(point_data):
+            self.ax.text(x, y, f'{i+1}', color="red", fontsize=12, ha='right', va='top')
+            self.ax.plot(x, y, marker='*', color='blue', markersize=10)  # Use star markers for waypoints
+            
         self.ax.figure.canvas.draw()
+
+
 
     def save_data(self):
         point_data = []
@@ -204,7 +227,7 @@ class Window(QMainWindow):
                 x = float(x_input.text())
                 y = float(y_input.text())
                 z = float(z_input.text())
-                w = w_slider.value() / 100.0
+                w = w_slider.value() / 1000.0
                 point_data.append((x, y, z))
                 json_data['points'].append({'x': x, 'y': y, 'z': z, 'w': w})
             except ValueError:
