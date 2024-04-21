@@ -10,7 +10,6 @@ from PyQt5.QtCore import Qt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from scipy.interpolate import splprep, splev
-import pandas as pd
 
 class Window(QMainWindow):
     def __init__(self):
@@ -20,7 +19,6 @@ class Window(QMainWindow):
         self.spline_order = 3  # Default spline order
         self.smoothing_factor = 0  # Default smoothing factor
         self.initUI()
-        self.load_waypoints()
 
     def initUI(self):
         self.setWindowTitle("3D Curve Plotter")
@@ -81,6 +79,8 @@ class Window(QMainWindow):
         self.ax = self.figure.add_subplot(111)  # Create an axis instance
         main_layout.addWidget(self.canvas, 0, 1, 3, 1)  # Span all vertical and horizontal space for canvas
 
+        self.load_waypoints()
+
     def create_slider(self, label_text, initial_value, callback, min_value, max_value, tick_interval):
         label = QLabel(f"{label_text}: {initial_value}")
         slider = QSlider(Qt.Horizontal)
@@ -95,7 +95,6 @@ class Window(QMainWindow):
     def update_order(self, slider, label):
         self.spline_order = slider.value()
         label.setText(f"Spline Order: {self.spline_order}")
-        self.ensure_minimum_points()
 
     def update_smoothing(self, slider, label):
         self.smoothing_factor = slider.value()
@@ -133,7 +132,7 @@ class Window(QMainWindow):
         self.points.append((x_input, y_input, z_input, w_slider))
 
     def delete_point(self):
-        if len(self.points) > self.spline_order + 1:
+        if self.points:
             to_delete = self.points.pop()
             for widget in to_delete:
                 widget.setParent(None)
@@ -142,22 +141,25 @@ class Window(QMainWindow):
             if layout:
                 layout.deleteLater()
 
-    def ensure_minimum_points(self):
-        required_points = self.spline_order + 1
-        while len(self.points) < required_points:
-            self.add_point()
-
     def load_waypoints(self):
         if os.path.exists(self.waypoints_file):
             with open(self.waypoints_file, 'r') as f:
                 data = json.load(f)
-                existing_point_count = len(data)
-                for point in data:
+                self.spline_order = data.get('spline_order', 3)
+                self.smoothing_factor = data.get('smoothing_factor', 0)
+                self.order_slider.setValue(self.spline_order)
+                self.smoothing_slider.setValue(self.smoothing_factor)
+
+                points_data = data.get('points', [])
+                for point in points_data:
                     w = float(point['w']) if 'w' in point else 0.5
                     self.add_point(str(point['x']), str(point['y']), str(point['z']), w)
-                additional_points_needed = self.spline_order + 1 - existing_point_count
-                for _ in range(additional_points_needed):
-                    self.add_point()
+
+                # Ensure that there are enough points after loading
+                if len(self.points) < self.spline_order + 1:
+                    additional_points_needed = self.spline_order + 1 - len(self.points)
+                    for _ in range(additional_points_needed):
+                        self.add_point()
 
     def plot_curve(self):
         point_data = []
@@ -192,7 +194,11 @@ class Window(QMainWindow):
 
     def save_data(self):
         point_data = []
-        json_data = []
+        json_data = {
+            'spline_order': self.spline_order,
+            'smoothing_factor': self.smoothing_factor,
+            'points': []
+        }
         for x_input, y_input, z_input, w_slider in self.points:
             try:
                 x = float(x_input.text())
@@ -200,7 +206,7 @@ class Window(QMainWindow):
                 z = float(z_input.text())
                 w = w_slider.value() / 100.0
                 point_data.append((x, y, z))
-                json_data.append({'x': x, 'y': y, 'z': z, 'w': w})
+                json_data['points'].append({'x': x, 'y': y, 'z': z, 'w': w})
             except ValueError:
                 continue
 
@@ -208,17 +214,9 @@ class Window(QMainWindow):
             print("Please input at least", self.spline_order + 1, "valid points.")
             return
 
-        points = np.array(point_data)
-        weights = [d['w'] for d in json_data]
-        tck, u = splprep(points.T, s=self.smoothing_factor, k=self.spline_order, per=False, w=weights)
-        new_points = splev(np.linspace(0, 1, 100), tck)
-        df = pd.DataFrame(np.column_stack(new_points), columns=['X', 'Y', 'Z'])
-        df.to_csv('curve_data.csv', index=False)
-        print("Data saved to 'curve_data.csv'.")
-
-        # Save waypoints
         with open(self.waypoints_file, 'w') as f:
             json.dump(json_data, f, indent=4)
+        print(f"Data saved to '{self.waypoints_file}'.")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
