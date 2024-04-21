@@ -102,36 +102,72 @@ class Window(QMainWindow):
         self.smoothing_factor = slider.value()
         label.setText(f"Smoothing Factor: {self.smoothing_factor}")
 
-    def add_point(self, x=None, y=None, z=None, w=0.5):
+    def add_point(self, x=None, y=None, z=None, w=1.0):
         point_layout = QHBoxLayout()
 
         # Label for point index
         index_label = QLabel(f"{len(self.points) + 1}")
         point_layout.addWidget(index_label)
 
+        # Prepare to add up and down buttons for each coordinate input
+        def adjust_value(line_edit, delta):
+            try:
+                current_value = float(line_edit.text())
+            except ValueError:
+                current_value = 0.0
+            new_value = current_value + delta
+            line_edit.setText(f"{new_value:.1f}")
+            self.plot_curve()  # Automatically replot the curve after adjusting values
+
+        # Helper to create buttons and connect events
+        def create_adjust_buttons(line_edit):
+            button_size = line_edit.sizeHint().height()  # Use height to determine appropriate button size
+            up_button = QPushButton('▲')
+            down_button = QPushButton('▼')
+            up_button.setMaximumWidth(button_size)  # Set maximum width to half of the input field
+            down_button.setMaximumWidth(button_size)  # Same for the down button
+            up_button.clicked.connect(lambda: adjust_value(line_edit, 0.1))
+            down_button.clicked.connect(lambda: adjust_value(line_edit, -0.1))
+            return up_button, down_button
+
         # Convert None or non-string values to empty strings
         x = "" if x is None or not isinstance(x, str) else x
         y = "" if y is None or not isinstance(y, str) else y
         z = "" if z is None or not isinstance(z, str) else z
-        
+
         x_input = QLineEdit(x)
         y_input = QLineEdit(y)
         z_input = QLineEdit(z)
-        
+
+        x_up, x_down = create_adjust_buttons(x_input)
+        y_up, y_down = create_adjust_buttons(y_input)
+        z_up, z_down = create_adjust_buttons(z_input)
+
+        # Arrange widgets in the layout
+        point_layout.addWidget(x_input)
+        point_layout.addWidget(x_up)
+        point_layout.addWidget(x_down)
+
+        point_layout.addWidget(y_input)
+        point_layout.addWidget(y_up)
+        point_layout.addWidget(y_down)
+
+        point_layout.addWidget(z_input)
+        point_layout.addWidget(z_up)
+        point_layout.addWidget(z_down)
+
         w_slider = QSlider(Qt.Horizontal)
         w_slider.setMinimum(0)
         w_slider.setMaximum(1000)  # Adjust for resolution 0.1
         w_slider.setValue(int(float(w) * 1000))  # Scale w to the slider's range
         w_slider.setTickPosition(QSlider.TicksBelow)
         w_slider.setTickInterval(100)
-        
+
         # Display the current value of the slider for w
         w_label = QLabel(f"{float(w):.1f}")
         w_slider.valueChanged.connect(lambda: w_label.setText(f"{w_slider.value() / 1000.0:.1f}"))
+        w_slider.valueChanged.connect(self.plot_curve)  # Automatically replot when the weight slider changes
 
-        point_layout.addWidget(x_input)
-        point_layout.addWidget(y_input)
-        point_layout.addWidget(z_input)
         point_layout.addWidget(w_slider)
         point_layout.addWidget(w_label)
         self.points_layout.addLayout(point_layout)
@@ -158,7 +194,7 @@ class Window(QMainWindow):
 
                 points_data = data.get('points', [])
                 for point in points_data:
-                    w = float(point['w']) if 'w' in point else 0.5
+                    w = float(point['w']) if 'w' in point else 1.0
                     self.add_point(str(point['x']), str(point['y']), str(point['z']), w)
 
                 # Ensure that there are enough points after loading
