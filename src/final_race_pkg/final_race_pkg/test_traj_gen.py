@@ -4,84 +4,99 @@ import sys
 import numpy as np
 import json
 import os
+import csv
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget,
                              QLineEdit, QHBoxLayout, QGridLayout, QLabel, QSlider, QScrollArea)
 from PyQt5.QtCore import Qt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from scipy.interpolate import splprep, splev
-from matplotlib.colorbar import ColorbarBase
 from matplotlib.colors import Normalize
 
 class Window(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.points = []
-        self.waypoints_file = 'waypoints.json'
-        self.spline_order = 3  # Default spline order
-        self.smoothing_factor = 0  # Default smoothing factor
+        self.curves = [
+            {"points": [], "spline_order": 3, "smoothing_factor": 0, "waypoints_file": "waypoints1.json", "curve_file": "curve1.csv"},
+            {"points": [], "spline_order": 3, "smoothing_factor": 0, "waypoints_file": "waypoints2.json", "curve_file": "curve2.csv"}
+        ]
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle("3D Curve Projection Plotter")
-        self.setGeometry(100, 100, 1400, 600)  # Adjusted size to accommodate color bar
+        self.setGeometry(100, 100, 1400, 800)
 
         # Main layout and central widget
-        main_layout = QGridLayout()
+        main_layout = QHBoxLayout()
+        left_layout = QVBoxLayout()
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
         central_widget.setLayout(main_layout)
 
+        # Split left area into two parts for two curves
+        curve1_area = QGridLayout()
+        curve2_area = QGridLayout()
+        left_layout.addLayout(curve1_area)
+        left_layout.addLayout(curve2_area)
+
+        # Create input areas for both curves
+        for i, area in enumerate([curve1_area, curve2_area]):
+            self.create_curve_input_area(area, i)
+
+        # Plot area on the right
+        self.figure = Figure(figsize=(10, 8))
+        self.canvas = FigureCanvas(self.figure)
+        self.ax = self.figure.add_subplot(111)  # 2D projection
+        main_layout.addLayout(left_layout)
+        main_layout.addWidget(self.canvas)
+
+    def create_curve_input_area(self, layout, curve_index):
         # Spline order and smoothing factor sliders
         controls_layout = QHBoxLayout()
-        self.order_slider, self.order_label = self.create_slider("Spline Order", self.spline_order, self.update_order, 1, 5, 1)
-        self.smoothing_slider, self.smoothing_label = self.create_slider("Smoothing Factor", self.smoothing_factor, self.update_smoothing, 0, 6, 1)
-        controls_layout.addWidget(self.order_label)
-        controls_layout.addWidget(self.order_slider)
-        controls_layout.addWidget(self.smoothing_label)
-        controls_layout.addWidget(self.smoothing_slider)
-        main_layout.addLayout(controls_layout, 0, 0, 1, 1)
+        order_slider, order_label = self.create_slider(f"Curve {curve_index + 1} Spline Order", self.curves[curve_index]["spline_order"], lambda s, l: self.update_order(s, l, curve_index), 1, 5, 1)
+        smoothing_slider, smoothing_label = self.create_slider(f"Curve {curve_index + 1} Smoothing Factor", self.curves[curve_index]["smoothing_factor"], lambda s, l: self.update_smoothing(s, l, curve_index), 0, 6, 1)
+        controls_layout.addWidget(order_label)
+        controls_layout.addWidget(order_slider)
+        controls_layout.addWidget(smoothing_label)
+        controls_layout.addWidget(smoothing_slider)
+        layout.addLayout(controls_layout, 0, 0, 1, 1)
 
         # Scrollable area for points
         scroll_widget = QWidget()
-        self.points_layout = QVBoxLayout(scroll_widget)
+        points_layout = QVBoxLayout(scroll_widget)
+        self.curves[curve_index]["layout"] = points_layout
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(scroll_widget)
-        main_layout.addWidget(scroll_area, 1, 0, 1, 1)
+        layout.addWidget(scroll_area, 1, 0, 1, 1)
 
         # Buttons layout
         buttons_layout = QHBoxLayout()
-        main_layout.addLayout(buttons_layout, 2, 0, 1, 1)
+        layout.addLayout(buttons_layout, 2, 0, 1, 1)
 
         # Add point button
-        add_point_button = QPushButton('+ Add Point', self)
-        add_point_button.clicked.connect(self.add_point)
+        add_point_button = QPushButton(f'+ Add Point to Curve {curve_index + 1}', self)
+        add_point_button.clicked.connect(lambda: self.add_point(curve_index))
         buttons_layout.addWidget(add_point_button)
 
         # Delete point button
-        delete_point_button = QPushButton('- Delete Point', self)
-        delete_point_button.clicked.connect(self.delete_point)
+        delete_point_button = QPushButton(f'- Delete Point from Curve {curve_index + 1}', self)
+        delete_point_button.clicked.connect(lambda: self.delete_point(curve_index))
         buttons_layout.addWidget(delete_point_button)
 
         # Plot button
-        plot_button = QPushButton('Plot', self)
+        plot_button = QPushButton('Plot All Curves', self)
         plot_button.clicked.connect(self.plot_curve)
         buttons_layout.addWidget(plot_button)
 
         # Save button
-        save_button = QPushButton('Save', self)
-        save_button.clicked.connect(self.save_data)
+        save_button = QPushButton(f'Save Curve {curve_index + 1}', self)
+        save_button.clicked.connect(lambda: self.save_data(curve_index))
         buttons_layout.addWidget(save_button)
 
-        # Figure and canvas
-        self.figure = Figure(figsize=(10, 5))
-        self.canvas = FigureCanvas(self.figure)
-        self.ax = self.figure.add_subplot(111)  # 2D projection
-        main_layout.addWidget(self.canvas, 0, 1, 3, 2)  # Adjust grid position
-
-        self.load_waypoints()
+        # Load initial data if exists
+        self.load_waypoints(curve_index)
 
     def create_slider(self, label_text, initial_value, callback, min_value, max_value, tick_interval):
         label = QLabel(f"{label_text}: {initial_value}")
@@ -92,44 +107,23 @@ class Window(QMainWindow):
         slider.setTickPosition(QSlider.TicksBelow)
         slider.setTickInterval(tick_interval)
         slider.valueChanged.connect(lambda: callback(slider, label))
-        slider.valueChanged.connect(self.plot_curve)  # Add this line to replot when slider values change
         return slider, label
 
-    def update_order(self, slider, label):
-        self.spline_order = slider.value()
-        label.setText(f"Spline Order: {self.spline_order}")
+    def update_order(self, slider, label, curve_index):
+        self.curves[curve_index]["spline_order"] = slider.value()
+        label.setText(f"Spline Order: {self.curves[curve_index]['spline_order']}")
 
-    def update_smoothing(self, slider, label):
-        self.smoothing_factor = slider.value()
-        label.setText(f"Smoothing Factor: {self.smoothing_factor}")
+    def update_smoothing(self, slider, label, curve_index):
+        self.curves[curve_index]["smoothing_factor"] = slider.value()
+        label.setText(f"Smoothing Factor: {self.curves[curve_index]['smoothing_factor']}")
 
-    def add_point(self, x=None, y=None, z=None, w=1.0):
+    def add_point(self, curve_index, x=None, y=None, z=None, w=1.0):
+        points_layout = self.curves[curve_index]["layout"]
         point_layout = QHBoxLayout()
 
         # Label for point index
-        index_label = QLabel(f"{len(self.points) + 1}")
+        index_label = QLabel(f"{len(self.curves[curve_index]['points']) + 1}")
         point_layout.addWidget(index_label)
-
-        # Prepare to add up and down buttons for each coordinate input
-        def adjust_value(line_edit, delta):
-            try:
-                current_value = float(line_edit.text())
-            except ValueError:
-                current_value = 0.0
-            new_value = current_value + delta
-            line_edit.setText(f"{new_value:.1f}")
-            self.plot_curve()  # Automatically replot the curve after adjusting values
-
-        # Helper to create buttons and connect events
-        def create_adjust_buttons(line_edit):
-            button_size = line_edit.sizeHint().height()  # Use height to determine appropriate button size
-            up_button = QPushButton('▲')
-            down_button = QPushButton('▼')
-            up_button.setMaximumWidth(button_size)  # Set maximum width to half of the input field
-            down_button.setMaximumWidth(button_size)  # Same for the down button
-            up_button.clicked.connect(lambda: adjust_value(line_edit, 0.1))
-            down_button.clicked.connect(lambda: adjust_value(line_edit, -0.1))
-            return up_button, down_button
 
         # Convert None or non-string values to empty strings
         x = "" if x is None or not isinstance(x, str) else x
@@ -139,24 +133,6 @@ class Window(QMainWindow):
         x_input = QLineEdit(x)
         y_input = QLineEdit(y)
         z_input = QLineEdit(z)
-
-        x_up, x_down = create_adjust_buttons(x_input)
-        y_up, y_down = create_adjust_buttons(y_input)
-        z_up, z_down = create_adjust_buttons(z_input)
-
-        # Arrange widgets in the layout
-        point_layout.addWidget(x_input)
-        point_layout.addWidget(x_up)
-        point_layout.addWidget(x_down)
-
-        point_layout.addWidget(y_input)
-        point_layout.addWidget(y_up)
-        point_layout.addWidget(y_down)
-
-        point_layout.addWidget(z_input)
-        point_layout.addWidget(z_up)
-        point_layout.addWidget(z_down)
-
         w_slider = QSlider(Qt.Horizontal)
         w_slider.setMinimum(1)  # Set minimum to avoid zero
         w_slider.setMaximum(10)  # Adjust for 0.1 increments from 0.1 to 1.0
@@ -167,115 +143,103 @@ class Window(QMainWindow):
         # Display the current value of the slider for w
         w_label = QLabel(f"{float(w):.1f}")
         w_slider.valueChanged.connect(lambda: w_label.setText(f"{w_slider.value() / 10.0:.1f}"))
-        w_slider.valueChanged.connect(self.plot_curve)  # Automatically replot when the weight slider changes
 
+        point_layout.addWidget(x_input)
+        point_layout.addWidget(y_input)
+        point_layout.addWidget(z_input)
         point_layout.addWidget(w_slider)
         point_layout.addWidget(w_label)
-        self.points_layout.addLayout(point_layout)
-        self.points.append((x_input, y_input, z_input, w_slider))
+        points_layout.addLayout(point_layout)
+        self.curves[curve_index]['points'].append((x_input, y_input, z_input, w_slider))
 
-
-    def delete_point(self):
-        if self.points:
-            to_delete = self.points.pop()
+    def delete_point(self, curve_index):
+        points = self.curves[curve_index]['points']
+        if points:
+            to_delete = points.pop()
             for widget in to_delete:
                 widget.setParent(None)
                 widget.deleteLater()
-            layout = self.points_layout.takeAt(self.points_layout.count() - 1)
-            if layout:
-                layout.deleteLater()
+            layout = self.curves[curve_index]["layout"]
+            layout_item = layout.takeAt(layout.count() - 1)
+            if layout_item:
+                layout_item.deleteLater()
 
-    def load_waypoints(self):
-        if os.path.exists(self.waypoints_file):
-            with open(self.waypoints_file, 'r') as f:
+    def load_waypoints(self, curve_index):
+        waypoints_file = self.curves[curve_index]['waypoints_file']
+        if os.path.exists(waypoints_file):
+            with open(waypoints_file, 'r') as f:
                 data = json.load(f)
-                self.spline_order = data.get('spline_order', 3)
-                self.smoothing_factor = data.get('smoothing_factor', 0)
-                self.order_slider.setValue(self.spline_order)
-                self.smoothing_slider.setValue(self.smoothing_factor)
+                self.curves[curve_index]['spline_order'] = data.get('spline_order', 3)
+                self.curves[curve_index]['smoothing_factor'] = data.get('smoothing_factor', 0)
 
                 points_data = data.get('points', [])
                 for point in points_data:
                     w = float(point['w']) if 'w' in point else 1.0
-                    self.add_point(str(point['x']), str(point['y']), str(point['z']), w)
+                    self.add_point(curve_index, str(point['x']), str(point['y']), str(point['z']), w)
 
-                # Ensure that there are enough points after loading
-                if len(self.points) < self.spline_order + 1:
-                    additional_points_needed = self.spline_order + 1 - len(self.points)
-                    for _ in range(additional_points_needed):
-                        self.add_point()
-
-    def plot_curve(self):
-        point_data = []
-        weights = []
-        for i, (x_input, y_input, z_input, w_slider) in enumerate(self.points):
-            try:
-                x = float(x_input.text())
-                y = float(y_input.text())
-                z = float(z_input.text())
-                w = w_slider.value() / 10.0
-                point_data.append((x, y, z))
-                weights.append(w)
-            except ValueError:
-                continue
-
-        if len(point_data) <= self.spline_order:
-            self.ax.clear()
-            if hasattr(self, 'cbar'):
-                self.cbar.remove()
-            self.ax.figure.canvas.draw()
-            print("Please input at least", self.spline_order + 1, "valid points.")
-            return
-
-        points = np.array(point_data)
-        tck, u = splprep(points.T, s=self.smoothing_factor, k=self.spline_order, per=True, w=weights)
-        new_points = splev(np.linspace(0, 1, 200), tck)
-        self.ax.clear()
-
-        # Remove existing colorbar if exists
-        if hasattr(self, 'cbar'):
-            self.cbar.remove()
-
-        scatter = self.ax.scatter(new_points[0], new_points[1], c=new_points[2], cmap='viridis', label='Projected Curve')
-        self.ax.set_xlabel('X coordinate')
-        self.ax.set_ylabel('Y coordinate')
-
-        # Adding a color bar to indicate z-values
-        self.cbar = self.figure.colorbar(scatter, ax=self.ax, orientation='vertical')
-        self.cbar.set_label('Z coordinate')
-
-        # Add waypoint indices to the plot
-        for i, (x, y, z) in enumerate(point_data):
-            self.ax.text(x, y, f'{i+1}', color="red", fontsize=12, ha='right', va='top')
-            self.ax.plot(x, y, marker='*', color='blue', markersize=10)  # Use star markers for waypoints
-            
-        self.ax.figure.canvas.draw()
-
-    def save_data(self):
+    def save_data(self, curve_index):
+        points = self.curves[curve_index]['points']
+        waypoints_file = self.curves[curve_index]['waypoints_file']
+        curve_file = self.curves[curve_index]['curve_file']
         point_data = []
         json_data = {
-            'spline_order': self.spline_order,
-            'smoothing_factor': self.smoothing_factor,
+            'spline_order': self.curves[curve_index]['spline_order'],
+            'smoothing_factor': self.curves[curve_index]['smoothing_factor'],
             'points': []
         }
-        for x_input, y_input, z_input, w_slider in self.points:
-            try:
-                x = float(x_input.text())
-                y = float(y_input.text())
-                z = float(z_input.text())
-                w = w_slider.value() / 10.0
-                point_data.append((x, y, z))
-                json_data['points'].append({'x': x, 'y': y, 'z': z, 'w': w})
-            except ValueError:
+        with open(curve_file, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['X', 'Y', 'Z', 'Weight'])
+
+            for x_input, y_input, z_input, w_slider in points:
+                try:
+                    x = float(x_input.text())
+                    y = float(y_input.text())
+                    z = float(z_input.text())
+                    w = w_slider.value() / 10.0
+                    point_data.append((x, y, z))
+                    json_data['points'].append({'x': x, 'y': y, 'z': z, 'w': w})
+                    writer.writerow([x, y, z, w])
+                except ValueError:
+                    continue
+
+        with open(waypoints_file, 'w') as f:
+            json.dump(json_data, f, indent=4)
+        print(f"Data for curve {curve_index + 1} saved to '{waypoints_file}' and '{curve_file}'.")
+
+    def plot_curve(self):
+        self.ax.clear()
+        colors = ['viridis', 'plasma']
+        for curve_index in range(2):
+            points = self.curves[curve_index]['points']
+            if not points:
+                continue
+            point_data = []
+            weights = []
+            for x_input, y_input, z_input, w_slider in points:
+                try:
+                    x = float(x_input.text())
+                    y = float(y_input.text())
+                    z = float(z_input.text())
+                    w = w_slider.value() / 10.0
+                    point_data.append((x, y, z))
+                    weights.append(w)
+                except ValueError:
+                    continue
+
+            if len(point_data) <= self.curves[curve_index]['spline_order']:
+                print(f"Curve {curve_index + 1}: Please input at least", self.curves[curve_index]['spline_order'] + 1, "valid points.")
                 continue
 
-        if len(point_data) <= self.spline_order:
-            print("Please input at least", self.spline_order + 1, "valid points.")
-            return
+            points = np.array(point_data)
+            tck, u = splprep(points.T, s=self.curves[curve_index]['smoothing_factor'], k=self.curves[curve_index]['spline_order'], per=True, w=weights)
+            new_points = splev(np.linspace(0, 1, 100), tck)
+            self.ax.scatter(new_points[0], new_points[1], c=new_points[2], cmap=colors[curve_index], label=f'Curve {curve_index + 1}')
 
-        with open(self.waypoints_file, 'w') as f:
-            json.dump(json_data, f, indent=4)
-        print(f"Data saved to '{self.waypoints_file}'.")
+        self.ax.legend()
+        self.ax.set_xlabel('X coordinate')
+        self.ax.set_ylabel('Y coordinate')
+        self.ax.figure.canvas.draw()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
