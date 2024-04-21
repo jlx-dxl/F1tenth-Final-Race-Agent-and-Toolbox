@@ -1,0 +1,91 @@
+[0.000000] (-) TimerEvent: {}
+[0.000178] (final_race_pkg) JobQueued: {'identifier': 'final_race_pkg', 'dependencies': OrderedDict()}
+[0.000226] (final_race_pkg) JobStarted: {'identifier': 'final_race_pkg'}
+[0.099565] (-) TimerEvent: {}
+[0.199906] (-) TimerEvent: {}
+[0.300438] (-) TimerEvent: {}
+[0.400913] (-) TimerEvent: {}
+[0.501214] (-) TimerEvent: {}
+[0.601495] (-) TimerEvent: {}
+[0.702167] (-) TimerEvent: {}
+[0.802735] (-) TimerEvent: {}
+[0.903116] (-) TimerEvent: {}
+[1.003552] (-) TimerEvent: {}
+[1.103841] (-) TimerEvent: {}
+[1.204122] (-) TimerEvent: {}
+[1.304406] (-) TimerEvent: {}
+[1.404690] (-) TimerEvent: {}
+[1.504960] (-) TimerEvent: {}
+[1.605255] (-) TimerEvent: {}
+[1.705515] (-) TimerEvent: {}
+[1.805825] (-) TimerEvent: {}
+[1.853713] (final_race_pkg) Command: {'cmd': ['/usr/bin/python3', 'setup.py', 'egg_info', '--egg-base', '../../build/final_race_pkg', 'build', '--build-base', '/home/lucien/ESE6150/final_race_ws/build/final_race_pkg/build', 'install', '--record', '/home/lucien/ESE6150/final_race_ws/build/final_race_pkg/install.log', '--install-scripts', '$base/lib/final_race_pkg', '--single-version-externally-managed'], 'cwd': '/home/lucien/ESE6150/final_race_ws/src/final_race_pkg', 'env': {'LESSOPEN': '| /usr/bin/lesspipe %s', 'CONDA_PROMPT_MODIFIER': '(py38)', 'USER': 'lucien', 'SSH_AGENT_PID': '1534', 'XDG_SESSION_TYPE': 'x11', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/foxy/opt/yaml_cpp_vendor/lib:/opt/ros/foxy/opt/rviz_ogre_vendor/lib:/opt/ros/foxy/lib/x86_64-linux-gnu:/opt/ros/foxy/lib:/usr/local/cuda/lib64:', 'HOME': '/home/lucien', 'CONDA_SHLVL': '2', 'DESKTOP_SESSION': 'ubuntu', 'ROS_PYTHON_VERSION': '3', 'GNOME_SHELL_SESSION_MODE': 'ubuntu', 'GTK_MODULES': 'gail:atk-bridge', 'MANAGERPID': '1215', 'DBUS_STARTER_BUS_TYPE': 'session', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus,guid=6430b378d1bc631d4867b7c266242707', 'COLORTERM': 'truecolor', '_CE_M': '', 'IM_CONFIG_PHASE': '1', 'COLCON_PREFIX_PATH': '/home/lucien/ESE6150/final_race_ws/install:/home/lucien/ESE6150/lab6_ws/install:/home/lucien/ESE6150/lab5_ws/install:/home/lucien/ESE6150/lab4_ws/install:/home/lucien/ESE6150/lab3_ws/install:/home/lucien/ESE6150/lab2_ws/install:/home/lucien/ESE6150/sim_ws/install', 'ROS_DISTRO': 'foxy', 'LOGNAME': 'lucien', 'JOURNAL_STREAM': '8:38563', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'USERNAME': 'lucien', 'TERM': 'xterm-256color', 'GNOME_DESKTOP_SESSION_ID': 'this-is-deprecated', '_CE_CONDA': '', 'ROS_LOCALHOST_ONLY': '0', 'WINDOWPATH': '2', 'PATH': '/home/lucien/anaconda3/envs/py38/bin:/home/lucien/anaconda3/condabin:/opt/ros/foxy/bin:/usr/local/cuda/bin:/home/lucien/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin', 'SESSION_MANAGER': 'local/230424:@/tmp/.ICE-unix/1572,unix/230424:/tmp/.ICE-unix/1572', 'INVOCATION_ID': 'ccf1fa03a6ca45fb9f96307a986e6953', 'XDG_MENU_PREFIX': 'gnome-', 'GNOME_TERMINAL_SCREEN': '/org/gnome/Terminal/screen/02ffbbec_d34d_4c43_b99b_2bade28d6427', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'LANG': 'en_US.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'CONDA_PREFIX_1': '/home/lucien/anaconda3', 'XMODIFIERS': '@im=ibus', 'XDG_SESSION_DESKTOP': 'ubuntu', 'XAUTHORITY': '/run/user/1000/gdm/Xauthority', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'GNOME_TERMINAL_SERVICE': ':1.265', 'SSH_AUTH_SOCK': '/run/user/1000/keyring/ssh', 'AMENT_PREFIX_PATH': '/home/lucien/ESE6150/final_race_ws/install/final_race_pkg:/home/lucien/ESE6150/lab6_ws/install/lab6_pkg:/home/lucien/ESE6150/lab5_ws/install/pure_pursuit:/home/lucien/ESE6150/lab4_ws/install/gap_follow:/home/lucien/ESE6150/lab3_ws/install/wall_follow:/home/lucien/ESE6150/lab2_ws/install/safety_node:/home/lucien/ESE6150/sim_ws/install/f1tenth_gym_ros:/opt/ros/foxy', 'CONDA_PYTHON_EXE': '/home/lucien/anaconda3/bin/python', 'SHELL': '/bin/bash', 'QT_ACCESSIBILITY': '1', 'ROS_MASTER_URI': 'http://127.0.0.1:11311', 'GDMSESSION': 'ubuntu', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'CONDA_DEFAULT_ENV': 'py38', 'GPG_AGENT_INFO': '/run/user/1000/gnupg/S.gpg-agent:0:1', 'QT_IM_MODULE': 'ibus', 'PWD': '/home/lucien/ESE6150/final_race_ws/build/final_race_pkg', 'LC_ALL': 'C.UTF-8', 'CUDA_HOME': '/usr/local/cuda', 'XDG_CONFIG_DIRS': '/etc/xdg/xdg-ubuntu:/etc/xdg', 'CONDA_EXE': '/home/lucien/anaconda3/bin/conda', 'DBUS_STARTER_ADDRESS': 'unix:path=/run/user/1000/bus,guid=6430b378d1bc631d4867b7c266242707', 'XDG_DATA_DIRS': '/usr/share/ubuntu:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop', 'PYTHONPATH': '/home/lucien/ESE6150/final_race_ws/build/final_race_pkg/prefix_override:/home/lucien/ESE6150/final_race_ws/install/final_race_pkg/lib/python3.8/site-packages:/home/lucien/ESE6150/final_race_ws/install/final_race_pkg/lib/python3.8/site-packages:/home/lucien/ESE6150/lab6_ws/install/lab6_pkg/lib/python3.8/site-packages:/home/lucien/ESE6150/lab5_ws/install/pure_pursuit/lib/python3.8/site-packages:/home/lucien/ESE6150/lab4_ws/install/gap_follow/lib/python3.8/site-packages:/home/lucien/ESE6150/lab3_ws/install/wall_follow/lib/python3.8/site-packages:/home/lucien/ESE6150/lab2_ws/install/safety_node/lib/python3.8/site-packages:/home/lucien/ESE6150/sim_ws/install/f1tenth_gym_ros/lib/python3.8/site-packages:/opt/ros/foxy/lib/python3.8/site-packages:/usr/lib/python3.6/dist-packages::/home/lucien/meam520_ws/src/meam520_labs', 'ROS_HOSTNAME': '127.0.0.1', 'CONDA_PREFIX': '/home/lucien/anaconda3/envs/py38', 'COLCON': '1', 'VTE_VERSION': '6003', 'CMAKE_PREFIX_PATH': '/home/lucien/ESE6150/lab6_ws/install/lab6_pkg:/home/lucien/ESE6150/lab5_ws/install/pure_pursuit:/home/lucien/ESE6150/lab4_ws/install/gap_follow:/home/lucien/ESE6150/lab3_ws/install/wall_follow:/home/lucien/ESE6150/lab2_ws/install/safety_node'}, 'shell': False}
+[1.906042] (-) TimerEvent: {}
+[2.006421] (-) TimerEvent: {}
+[2.052121] (final_race_pkg) StderrLine: {'line': b'/home/lucien/.local/lib/python3.8/site-packages/setuptools/dist.py:472: SetuptoolsDeprecationWarning: Invalid dash-separated options\n'}
+[2.052457] (final_race_pkg) StderrLine: {'line': b'!!\n'}
+[2.052556] (final_race_pkg) StderrLine: {'line': b'\n'}
+[2.052644] (final_race_pkg) StderrLine: {'line': b'        ********************************************************************************\n'}
+[2.052729] (final_race_pkg) StderrLine: {'line': b"        Usage of dash-separated 'script-dir' will not be supported in future\n"}
+[2.052813] (final_race_pkg) StderrLine: {'line': b"        versions. Please use the underscore name 'script_dir' instead.\n"}
+[2.052896] (final_race_pkg) StderrLine: {'line': b'\n'}
+[2.052978] (final_race_pkg) StderrLine: {'line': b'        By 2024-Sep-26, you need to update your project and remove deprecated calls\n'}
+[2.053084] (final_race_pkg) StderrLine: {'line': b'        or your builds will no longer be supported.\n'}
+[2.053175] (final_race_pkg) StderrLine: {'line': b'\n'}
+[2.053257] (final_race_pkg) StderrLine: {'line': b'        See https://setuptools.pypa.io/en/latest/userguide/declarative_config.html for details.\n'}
+[2.053339] (final_race_pkg) StderrLine: {'line': b'        ********************************************************************************\n'}
+[2.053420] (final_race_pkg) StderrLine: {'line': b'\n'}
+[2.053500] (final_race_pkg) StderrLine: {'line': b'!!\n'}
+[2.053580] (final_race_pkg) StderrLine: {'line': b'  opt = self.warn_dash_deprecation(opt, section)\n'}
+[2.106548] (-) TimerEvent: {}
+[2.206800] (-) TimerEvent: {}
+[2.210644] (final_race_pkg) StdoutLine: {'line': b'running egg_info\n'}
+[2.235292] (final_race_pkg) StdoutLine: {'line': b'writing ../../build/final_race_pkg/final_race_pkg.egg-info/PKG-INFO\n'}
+[2.235854] (final_race_pkg) StdoutLine: {'line': b'writing dependency_links to ../../build/final_race_pkg/final_race_pkg.egg-info/dependency_links.txt\n'}
+[2.236170] (final_race_pkg) StdoutLine: {'line': b'writing entry points to ../../build/final_race_pkg/final_race_pkg.egg-info/entry_points.txt\n'}
+[2.236430] (final_race_pkg) StdoutLine: {'line': b'writing requirements to ../../build/final_race_pkg/final_race_pkg.egg-info/requires.txt\n'}
+[2.236703] (final_race_pkg) StdoutLine: {'line': b'writing top-level names to ../../build/final_race_pkg/final_race_pkg.egg-info/top_level.txt\n'}
+[2.306904] (-) TimerEvent: {}
+[2.407212] (-) TimerEvent: {}
+[2.476502] (final_race_pkg) StdoutLine: {'line': b"reading manifest file '../../build/final_race_pkg/final_race_pkg.egg-info/SOURCES.txt'\n"}
+[2.477817] (final_race_pkg) StdoutLine: {'line': b"writing manifest file '../../build/final_race_pkg/final_race_pkg.egg-info/SOURCES.txt'\n"}
+[2.478087] (final_race_pkg) StdoutLine: {'line': b'running build\n'}
+[2.478221] (final_race_pkg) StdoutLine: {'line': b'running build_py\n'}
+[2.478357] (final_race_pkg) StdoutLine: {'line': b'copying final_race_pkg/main_agent.py -> /home/lucien/ESE6150/final_race_ws/build/final_race_pkg/build/lib/final_race_pkg\n'}
+[2.478591] (final_race_pkg) StdoutLine: {'line': b'copying final_race_pkg/opp_agent.py -> /home/lucien/ESE6150/final_race_ws/build/final_race_pkg/build/lib/final_race_pkg\n'}
+[2.478857] (final_race_pkg) StdoutLine: {'line': b'copying final_race_pkg/traj_gen.py -> /home/lucien/ESE6150/final_race_ws/build/final_race_pkg/build/lib/final_race_pkg\n'}
+[2.479122] (final_race_pkg) StdoutLine: {'line': b'copying final_race_pkg/__init__.py -> /home/lucien/ESE6150/final_race_ws/build/final_race_pkg/build/lib/final_race_pkg\n'}
+[2.479617] (final_race_pkg) StdoutLine: {'line': b'running install\n'}
+[2.480041] (final_race_pkg) StderrLine: {'line': b'/home/lucien/.local/lib/python3.8/site-packages/setuptools/_distutils/cmd.py:66: SetuptoolsDeprecationWarning: setup.py install is deprecated.\n'}
+[2.480175] (final_race_pkg) StderrLine: {'line': b'!!\n'}
+[2.480270] (final_race_pkg) StderrLine: {'line': b'\n'}
+[2.480356] (final_race_pkg) StderrLine: {'line': b'        ********************************************************************************\n'}
+[2.480440] (final_race_pkg) StderrLine: {'line': b'        Please avoid running ``setup.py`` directly.\n'}
+[2.480522] (final_race_pkg) StderrLine: {'line': b'        Instead, use pypa/build, pypa/installer or other\n'}
+[2.480602] (final_race_pkg) StderrLine: {'line': b'        standards-based tools.\n'}
+[2.480681] (final_race_pkg) StderrLine: {'line': b'\n'}
+[2.480761] (final_race_pkg) StderrLine: {'line': b'        See https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html for details.\n'}
+[2.480842] (final_race_pkg) StderrLine: {'line': b'        ********************************************************************************\n'}
+[2.480924] (final_race_pkg) StderrLine: {'line': b'\n'}
+[2.481004] (final_race_pkg) StderrLine: {'line': b'!!\n'}
+[2.481109] (final_race_pkg) StderrLine: {'line': b'  self.initialize_options()\n'}
+[2.492697] (final_race_pkg) StdoutLine: {'line': b'running install_lib\n'}
+[2.507302] (-) TimerEvent: {}
+[2.520163] (final_race_pkg) StdoutLine: {'line': b'copying /home/lucien/ESE6150/final_race_ws/build/final_race_pkg/build/lib/final_race_pkg/main_agent.py -> /home/lucien/ESE6150/final_race_ws/install/final_race_pkg/lib/python3.8/site-packages/final_race_pkg\n'}
+[2.521109] (final_race_pkg) StdoutLine: {'line': b'byte-compiling /home/lucien/ESE6150/final_race_ws/install/final_race_pkg/lib/python3.8/site-packages/final_race_pkg/main_agent.py to main_agent.cpython-38.pyc\n'}
+[2.523509] (final_race_pkg) StdoutLine: {'line': b'running install_data\n'}
+[2.558620] (final_race_pkg) StdoutLine: {'line': b'copying resource/final_race_pkg -> /home/lucien/ESE6150/final_race_ws/install/final_race_pkg/share/ament_index/resource_index/packages\n'}
+[2.558899] (final_race_pkg) StdoutLine: {'line': b'copying package.xml -> /home/lucien/ESE6150/final_race_ws/install/final_race_pkg/share/final_race_pkg\n'}
+[2.559152] (final_race_pkg) StdoutLine: {'line': b'running install_egg_info\n'}
+[2.595469] (final_race_pkg) StdoutLine: {'line': b"removing '/home/lucien/ESE6150/final_race_ws/install/final_race_pkg/lib/python3.8/site-packages/final_race_pkg-0.0.0-py3.8.egg-info' (and everything under it)\n"}
+[2.595944] (final_race_pkg) StdoutLine: {'line': b'Copying ../../build/final_race_pkg/final_race_pkg.egg-info to /home/lucien/ESE6150/final_race_ws/install/final_race_pkg/lib/python3.8/site-packages/final_race_pkg-0.0.0-py3.8.egg-info\n'}
+[2.597389] (final_race_pkg) StdoutLine: {'line': b'running install_scripts\n'}
+[2.607409] (-) TimerEvent: {}
+[2.698174] (final_race_pkg) StdoutLine: {'line': b'Installing main_agent script to /home/lucien/ESE6150/final_race_ws/install/final_race_pkg/lib/final_race_pkg\n'}
+[2.698467] (final_race_pkg) StdoutLine: {'line': b'Installing opp_agent script to /home/lucien/ESE6150/final_race_ws/install/final_race_pkg/lib/final_race_pkg\n'}
+[2.699063] (final_race_pkg) StdoutLine: {'line': b"writing list of installed files to '/home/lucien/ESE6150/final_race_ws/build/final_race_pkg/install.log'\n"}
+[2.707547] (-) TimerEvent: {}
+[2.735743] (final_race_pkg) CommandEnded: {'returncode': 0}
+[2.807656] (-) TimerEvent: {}
+[2.823191] (final_race_pkg) JobEnded: {'identifier': 'final_race_pkg', 'rc': 0}
+[2.824078] (-) EventReactorShutdown: {}

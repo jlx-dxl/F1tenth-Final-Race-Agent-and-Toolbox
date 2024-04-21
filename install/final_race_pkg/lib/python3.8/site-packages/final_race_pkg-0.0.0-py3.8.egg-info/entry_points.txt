@@ -1,0 +1,3 @@
+[console_scripts]
+main_agent = final_race_pkg.main_agent:main
+opp_agent = final_race_pkg.opp_agent:main
