@@ -301,7 +301,7 @@ class CurvePlotterNode(Node, QMainWindow):
                     data_array[i] = [x, y, z, yaw]
 
                 traj_msg = Float32MultiArray()
-                traj_msg.data = data_array.flatten()
+                traj_msg.data = data_array.flatten().tolist()  # 将 numpy 数组转换为列表
                 if curve_index == 0:
                     self.publisher_inner.publish(traj_msg)
                 elif curve_index == 1:

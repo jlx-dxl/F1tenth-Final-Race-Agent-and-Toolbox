@@ -1,0 +1,62 @@
+[1.835s] Invoking command in '/home/lucien/ESE6150/final_race/src/final_race_pkg': CONDA_PROMPT_MODIFIER=(py38) PYTHONPATH=/home/lucien/ESE6150/final_race/build/final_race_pkg/prefix_override:/home/lucien/ESE6150/final_race/install/final_race_pkg/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base ../../build/final_race_pkg build --build-base /home/lucien/ESE6150/final_race/build/final_race_pkg/build install --record /home/lucien/ESE6150/final_race/build/final_race_pkg/install.log --install-scripts $base/lib/final_race_pkg --single-version-externally-managed
+[2.036s] /home/lucien/.local/lib/python3.8/site-packages/setuptools/dist.py:472: SetuptoolsDeprecationWarning: Invalid dash-separated options
+[2.036s] !!
+[2.036s] 
+[2.037s]         ********************************************************************************
+[2.037s]         Usage of dash-separated 'script-dir' will not be supported in future
+[2.037s]         versions. Please use the underscore name 'script_dir' instead.
+[2.037s] 
+[2.037s]         By 2024-Sep-26, you need to update your project and remove deprecated calls
+[2.037s]         or your builds will no longer be supported.
+[2.037s] 
+[2.038s]         See https://setuptools.pypa.io/en/latest/userguide/declarative_config.html for details.
+[2.038s]         ********************************************************************************
+[2.038s] 
+[2.038s] !!
+[2.038s]   opt = self.warn_dash_deprecation(opt, section)
+[2.202s] running egg_info
+[2.229s] writing ../../build/final_race_pkg/final_race_pkg.egg-info/PKG-INFO
+[2.230s] writing dependency_links to ../../build/final_race_pkg/final_race_pkg.egg-info/dependency_links.txt
+[2.230s] writing entry points to ../../build/final_race_pkg/final_race_pkg.egg-info/entry_points.txt
+[2.231s] writing requirements to ../../build/final_race_pkg/final_race_pkg.egg-info/requires.txt
+[2.231s] writing top-level names to ../../build/final_race_pkg/final_race_pkg.egg-info/top_level.txt
+[2.484s] reading manifest file '../../build/final_race_pkg/final_race_pkg.egg-info/SOURCES.txt'
+[2.486s] writing manifest file '../../build/final_race_pkg/final_race_pkg.egg-info/SOURCES.txt'
+[2.486s] running build
+[2.487s] running build_py
+[2.487s] copying final_race_pkg/test_traj_gen.py -> /home/lucien/ESE6150/final_race/build/final_race_pkg/build/lib/final_race_pkg
+[2.487s] copying final_race_pkg/main_agent.py -> /home/lucien/ESE6150/final_race/build/final_race_pkg/build/lib/final_race_pkg
+[2.488s] copying final_race_pkg/opp_agent.py -> /home/lucien/ESE6150/final_race/build/final_race_pkg/build/lib/final_race_pkg
+[2.488s] copying final_race_pkg/traj_killer.py -> /home/lucien/ESE6150/final_race/build/final_race_pkg/build/lib/final_race_pkg
+[2.488s] copying final_race_pkg/traj_gen.py -> /home/lucien/ESE6150/final_race/build/final_race_pkg/build/lib/final_race_pkg
+[2.488s] copying final_race_pkg/trajectory_generator.py -> /home/lucien/ESE6150/final_race/build/final_race_pkg/build/lib/final_race_pkg
+[2.489s] copying final_race_pkg/__init__.py -> /home/lucien/ESE6150/final_race/build/final_race_pkg/build/lib/final_race_pkg
+[2.489s] running install
+[2.490s] /home/lucien/.local/lib/python3.8/site-packages/setuptools/_distutils/cmd.py:66: SetuptoolsDeprecationWarning: setup.py install is deprecated.
+[2.490s] !!
+[2.490s] 
+[2.490s]         ********************************************************************************
+[2.490s]         Please avoid running ``setup.py`` directly.
+[2.490s]         Instead, use pypa/build, pypa/installer or other
+[2.490s]         standards-based tools.
+[2.491s] 
+[2.491s]         See https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html for details.
+[2.491s]         ********************************************************************************
+[2.491s] 
+[2.491s] !!
+[2.491s]   self.initialize_options()
+[2.503s] running install_lib
+[2.538s] copying /home/lucien/ESE6150/final_race/build/final_race_pkg/build/lib/final_race_pkg/opp_agent.py -> /home/lucien/ESE6150/final_race/install/final_race_pkg/lib/python3.8/site-packages/final_race_pkg
+[2.539s] byte-compiling /home/lucien/ESE6150/final_race/install/final_race_pkg/lib/python3.8/site-packages/final_race_pkg/opp_agent.py to opp_agent.cpython-38.pyc
+[2.542s] running install_data
+[2.579s] copying resource/final_race_pkg -> /home/lucien/ESE6150/final_race/install/final_race_pkg/share/ament_index/resource_index/packages
+[2.579s] copying package.xml -> /home/lucien/ESE6150/final_race/install/final_race_pkg/share/final_race_pkg
+[2.579s] running install_egg_info
+[2.614s] removing '/home/lucien/ESE6150/final_race/install/final_race_pkg/lib/python3.8/site-packages/final_race_pkg-0.0.0-py3.8.egg-info' (and everything under it)
+[2.614s] Copying ../../build/final_race_pkg/final_race_pkg.egg-info to /home/lucien/ESE6150/final_race/install/final_race_pkg/lib/python3.8/site-packages/final_race_pkg-0.0.0-py3.8.egg-info
+[2.615s] running install_scripts
+[2.704s] Installing main_agent script to /home/lucien/ESE6150/final_race/install/final_race_pkg/lib/final_race_pkg
+[2.705s] Installing opp_agent script to /home/lucien/ESE6150/final_race/install/final_race_pkg/lib/final_race_pkg
+[2.705s] Installing traj_killer script to /home/lucien/ESE6150/final_race/install/final_race_pkg/lib/final_race_pkg
+[2.705s] writing list of installed files to '/home/lucien/ESE6150/final_race/build/final_race_pkg/install.log'
+[2.734s] Invoked command in '/home/lucien/ESE6150/final_race/src/final_race_pkg' returned '0': CONDA_PROMPT_MODIFIER=(py38) PYTHONPATH=/home/lucien/ESE6150/final_race/build/final_race_pkg/prefix_override:/home/lucien/ESE6150/final_race/install/final_race_pkg/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base ../../build/final_race_pkg build --build-base /home/lucien/ESE6150/final_race/build/final_race_pkg/build install --record /home/lucien/ESE6150/final_race/build/final_race_pkg/install.log --install-scripts $base/lib/final_race_pkg --single-version-externally-managed

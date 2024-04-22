@@ -6,6 +6,7 @@ import math
 
 import numpy as np
 from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Float32MultiArray
 from ackermann_msgs.msg import AckermannDriveStamped, AckermannDrive
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
@@ -78,10 +79,21 @@ class PurePursuit(Node):
         waypoint_path_topic = '/ego_trajectory'
 
         self.traj_published = False
+        self.traj_sub = self.create_subscription(Float32MultiArray, 'traj_inner', self.listener_callback_inner, 10)
         self.drive_pub_ = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
         self.waypoint_pub_ = self.create_publisher(Marker, waypoint_topic, 10)
         self.waypoint_path_pub_ = self.create_publisher(Marker, waypoint_path_topic, 10)
 
+    def listener_callback_inner(self, msg):
+        trajectory_array = np.array(msg.data, dtype=np.float32).reshape((200, 4)).astype(float)
+        self.x_list = trajectory_array[:, 0]
+        self.y_list = trajectory_array[:, 1]
+        self.v_list = trajectory_array[:, 2]
+        self.xyv_list = trajectory_array[:, 0:2]   # (x,y,v)
+        self.yaw_list = trajectory_array[:, 3]
+        self.v_max = np.max(self.v_list)
+        self.v_min = np.min(self.v_list)
+        
     def pose_callback(self, pose_msg):
         if self.flag == True:  
             curr_x = pose_msg.pose.position.x
@@ -162,7 +174,7 @@ class PurePursuit(Node):
         message = AckermannDriveStamped()
         message.drive.speed = target_v
         message.drive.steering_angle = self.get_steer(error)
-        self.get_logger().info('speed: %f, steer: %f' % (target_v, self.get_steer(error)))
+        # self.get_logger().info('speed: %f, steer: %f' % (target_v, self.get_steer(error)))
         self.drive_pub_.publish(message)
 
         # remember to visualize the waypoints
