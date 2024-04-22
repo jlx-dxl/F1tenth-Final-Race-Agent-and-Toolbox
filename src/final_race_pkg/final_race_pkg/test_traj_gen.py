@@ -261,9 +261,10 @@ class Window(QMainWindow):
             'smoothing_factor': self.curves[curve_index]['smoothing_factor'],
             'points': []
         }
+        # Prepare for CSV
         with open(curve_file, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(['X', 'Y', 'Z', 'Weight'])
+            writer.writerow(['X', 'Y', 'Z', 'Weight', 'Yaw'])
 
             for x_input, y_input, z_input, w_slider in points:
                 try:
@@ -271,11 +272,28 @@ class Window(QMainWindow):
                     y = float(y_input.text())
                     z = float(z_input.text())
                     w = w_slider.value() / 10.0
-                    point_data.append((x, y, z))
+                    point_data.append((x, y, z, w))
                     json_data['points'].append({'x': x, 'y': y, 'z': z, 'w': w})
-                    writer.writerow([x, y, z, w])
                 except ValueError:
                     continue
+
+            if len(point_data) <= self.curves[curve_index]['spline_order']:
+                print(f"Curve {curve_index + 1}: Please input at least {self.curves[curve_index]['spline_order'] + 1} valid points.")
+            else:
+                # Compute spline and 200 interpolated points
+                points_np = np.array(point_data)
+                tck, u = splprep(points_np[:, :3].T, s=self.curves[curve_index]['smoothing_factor'], k=self.curves[curve_index]['spline_order'], w=points_np[:, 3])
+                new_points = splev(np.linspace(0, 1, 200), tck)
+
+                # Calculate yaw angles
+                x_vals = new_points[0]
+                y_vals = new_points[1]
+                yaw_angles = np.arctan2(np.diff(y_vals, prepend=y_vals[0]), np.diff(x_vals, prepend=x_vals[0]))
+
+                for i in range(200):
+                    x, y, z, w = new_points[0][i], new_points[1][i], new_points[2][i], points_np[i % len(points), 3]
+                    yaw = yaw_angles[i]
+                    writer.writerow([x, y, z, w, yaw])
 
         with open(waypoints_file, 'w') as f:
             json.dump(json_data, f, indent=4)
@@ -323,7 +341,7 @@ class Window(QMainWindow):
 
             points = np.array(point_data)
             tck, u = splprep(points.T, s=self.curves[curve_index]['smoothing_factor'], k=self.curves[curve_index]['spline_order'], per=True, w=weights)
-            new_points = splev(np.linspace(0, 1, 100), tck)
+            new_points = splev(np.linspace(0, 1, 200), tck)
             
             scatter = self.ax.scatter(new_points[0], new_points[1], c=new_points[2], cmap=color_maps[curve_index], label=f'Curve {curve_index + 1}')
             scatters.append(scatter)
