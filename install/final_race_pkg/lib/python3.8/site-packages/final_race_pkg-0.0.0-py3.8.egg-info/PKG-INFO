@@ -6,3 +6,7 @@ Maintainer: lucien
 Maintainer-email: 2559346258@qq.com
 License: TODO: License declaration
 Requires-Dist: setuptools
+Requires-Dist: PyQt5
+Requires-Dist: matplotlib
+Requires-Dist: numpy
+Requires-Dist: scipy

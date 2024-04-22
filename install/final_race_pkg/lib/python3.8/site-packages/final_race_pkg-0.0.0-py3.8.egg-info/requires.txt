@@ -1,1 +1,5 @@
 setuptools
+PyQt5
+matplotlib
+numpy
+scipy

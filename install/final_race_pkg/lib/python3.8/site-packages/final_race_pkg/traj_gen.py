@@ -5,14 +5,6 @@ import matplotlib.pyplot as plt
 def rotate_left(lst, i=1):
     return np.hstack((lst[i:],lst[:i]))
 
-# # inner
-# h_s = 5.0    # high speed
-# m_s =4.0     # medium speed
-# l_s = 3.0    # low speed
-
-# x = np.array([10.6, 11.1, 9.5, 7.7, 6.3, 8.2, 7.5, 5.8,  4.0,  6.0,  6.5, 8.0])
-# y = np.array([ 4.0,  6.3, 8.0, 8.7, 6.8, 5.7, 3.5, 1.2, -2.4, -2.7, -1.4, 0.5])
-# z = np.array([ m_s,  l_s, m_s, l_s, l_s, m_s, m_s, h_s,  l_s,  l_s,  m_s, h_s])
 
 # middle
 h_s = 5.0    # high speed
@@ -23,14 +15,6 @@ x = np.array([-1.44, 1.22, 3.53, 5.04, 7.16, 5.0, 1.97, 0.94, 0.82, -1.4, -3.1, 
 y = np.array([-0.47,-0.55,-0.54,-0.43,  1.0, 2.5, 2.48, 3.96, 6.47, 8.55, 6.28, 2.94, 0.88])
 z = np.array([  l_s,  m_s,  h_s,  m_s,  l_s,  m_s, m_s,  h_s,  m_s,  l_s,  m_s,  m_s,  l_s])
 
-# # outer
-# h_s = 5.0    # high speed
-# m_s =4.0     # medium speed
-# l_s = 3.0    # low speed
-
-# x = np.array([10.6, 11.1, 9.5, 7.7, 6.3, 8.2, 7.5, 5.8,  4.0,  6.0,  6.5, 8.0])
-# y = np.array([ 4.0,  6.3, 8.0, 8.7, 6.8, 5.7, 3.5, 1.2, -2.4, -2.7, -1.4, 0.5])
-# z = np.array([ m_s,  l_s, m_s, l_s, l_s, m_s, m_s, h_s,  l_s,  l_s,  m_s, h_s])
 
 # due to the unsatisfactory effect at the junction of the beginning and end, try placing the junction in different segments.
 for i in range(10):

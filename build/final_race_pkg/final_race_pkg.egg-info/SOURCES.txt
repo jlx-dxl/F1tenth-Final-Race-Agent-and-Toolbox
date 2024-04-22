@@ -11,7 +11,9 @@ setup.py
 final_race_pkg/__init__.py
 final_race_pkg/main_agent.py
 final_race_pkg/opp_agent.py
+final_race_pkg/test_traj_gen.py
 final_race_pkg/traj_gen.py
+final_race_pkg/traj_killer.py
 final_race_pkg/trajectory_generator.py
 resource/final_race_pkg
 test/test_copyright.py

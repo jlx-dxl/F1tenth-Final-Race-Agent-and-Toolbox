@@ -11,7 +11,13 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
     ],
-    install_requires=['setuptools'],
+    install_requires=[
+    'setuptools',
+    'PyQt5',
+    'matplotlib',
+    'numpy',
+    'scipy'
+    ],
     zip_safe=True,
     maintainer='lucien',
     maintainer_email='2559346258@qq.com',
@@ -22,7 +28,7 @@ setup(
     'console_scripts': [
         'main_agent = final_race_pkg.main_agent:main',
         'opp_agent = final_race_pkg.opp_agent:main',
-        'trajectory_generator = final_race_pkg.trajectory_generator:main',
+        'traj_killer = final_race_pkg.traj_killer:main',
     ],
     },
 )
