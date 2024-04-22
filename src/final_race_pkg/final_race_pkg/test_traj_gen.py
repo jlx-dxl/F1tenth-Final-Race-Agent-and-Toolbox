@@ -291,6 +291,8 @@ class Window(QMainWindow):
 
         color_maps = ['cool', 'autumn']  # Updated color maps for higher contrast
         scatters = []  # To keep scatter objects for colorbars
+        markers = ['^', '*']  # Triangle and star markers
+        colors = ['blue', 'red']  # Colors for the different curves' waypoints
 
         for curve_index in range(2):
             points = self.curves[curve_index]['points']
@@ -298,7 +300,7 @@ class Window(QMainWindow):
                 continue
             point_data = []
             weights = []
-            for x_input, y_input, z_input, w_slider in points:
+            for i, (x_input, y_input, z_input, w_slider) in enumerate(points):
                 try:
                     x = float(x_input.text())
                     y = float(y_input.text())
@@ -306,6 +308,10 @@ class Window(QMainWindow):
                     w = w_slider.value() / 10.0
                     point_data.append((x, y, z))
                     weights.append(w)
+
+                    # Mark each waypoint with its index number
+                    self.ax.scatter(x, y, color=colors[curve_index], marker=markers[curve_index], s=100)  # s is the size of the marker
+                    self.ax.text(x, y, f'{i+1}', color=colors[curve_index], fontsize=12, ha='right')
                 except ValueError:
                     continue
 
@@ -321,15 +327,15 @@ class Window(QMainWindow):
             scatters.append(scatter)
 
         # Handling colorbars
-        for i,(scatter, _) in enumerate(zip(scatters, color_maps)):
-            colorbar = self.figure.colorbar(scatter, ax=self.ax, orientation='horizontal', pad=0.1, fraction=0.02)
-            colorbar.set_label(f'Traj {i+1}')
+        for scatter, cmap in zip(scatters, color_maps):
+            colorbar = self.figure.colorbar(scatter, ax=self.ax, orientation='vertical', pad=0.1, fraction=0.02)
+            colorbar.set_label(f'Color scale for {cmap}')
             self.colorbars.append(colorbar)  # Keep track of colorbars
 
+        self.ax.legend()
         self.ax.set_xlabel('X coordinate')
         self.ax.set_ylabel('Y coordinate')
         self.ax.figure.canvas.draw()
-
 
 
 if __name__ == "__main__":
