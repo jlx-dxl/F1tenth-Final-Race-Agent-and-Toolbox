@@ -347,9 +347,9 @@ class Window(QMainWindow):
             scatters.append(scatter)
 
         # Handling colorbars
-        for scatter, cmap in zip(scatters, color_maps):
+        for i,(scatter, _) in enumerate(zip(scatters, color_maps)):
             colorbar = self.figure.colorbar(scatter, ax=self.ax, orientation='vertical', pad=0.1, fraction=0.02)
-            colorbar.set_label(f'Color scale for {cmap}')
+            colorbar.set_label(f'Traj {i+1}')
             self.colorbars.append(colorbar)  # Keep track of colorbars
             
         # Define polygons' vertices
@@ -364,7 +364,6 @@ class Window(QMainWindow):
         self.ax.add_patch(polygon1)
         self.ax.add_patch(polygon2)
 
-        self.ax.legend()
         self.ax.set_xlabel('X coordinate')
         self.ax.set_ylabel('Y coordinate')
         self.ax.figure.canvas.draw()
