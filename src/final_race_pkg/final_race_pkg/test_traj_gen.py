@@ -13,6 +13,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from scipy.interpolate import splprep, splev
 from matplotlib.colors import Normalize
+from matplotlib.patches import Polygon
+
 
 class Window(QMainWindow):
     def __init__(self):
@@ -331,6 +333,18 @@ class Window(QMainWindow):
             colorbar = self.figure.colorbar(scatter, ax=self.ax, orientation='vertical', pad=0.1, fraction=0.02)
             colorbar.set_label(f'Color scale for {cmap}')
             self.colorbars.append(colorbar)  # Keep track of colorbars
+            
+        # Define polygons' vertices
+        vertices1 = [(10.4, -1.5), (10.2, 4.1), (2.7, 4.0), (2.7, 10.1), (-4.1, 9.9), (-4.1, -1.5)]
+        vertices2 = [(5.4, 1.4), (-0.8, 1.3), (-1.0, 6.6), (-1.8, 6.5), (-1.6, 0.6), (5.3, 0.7)]
+
+        # Create Polygon objects
+        polygon1 = Polygon(vertices1, closed=True, edgecolor='black', fill=None, linewidth=3.0)
+        polygon2 = Polygon(vertices2, closed=True, edgecolor='black', fill=True, facecolor='black')
+        
+        # Add polygons to the plot
+        self.ax.add_patch(polygon1)
+        self.ax.add_patch(polygon2)
 
         self.ax.legend()
         self.ax.set_xlabel('X coordinate')
