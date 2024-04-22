@@ -264,7 +264,7 @@ class Window(QMainWindow):
         # Prepare for CSV
         with open(curve_file, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(['X', 'Y', 'Z', 'Weight', 'Yaw'])
+            writer.writerow(['X', 'Y', 'Z', 'Yaw'])
 
             for x_input, y_input, z_input, w_slider in points:
                 try:
@@ -282,6 +282,8 @@ class Window(QMainWindow):
             else:
                 # Compute spline and 200 interpolated points
                 points_np = np.array(point_data)
+                if not np.array_equal(points_np[0,:], points_np[-1,:]):
+                    points_np = np.vstack((points_np, points_np[0,:]))
                 tck, u = splprep(points_np[:, :3].T, s=self.curves[curve_index]['smoothing_factor'], k=self.curves[curve_index]['spline_order'], w=points_np[:, 3])
                 new_points = splev(np.linspace(0, 1, 200), tck)
 
