@@ -284,7 +284,14 @@ class Window(QMainWindow):
             return  # Optionally, raise an exception or create a logger warning
 
         self.ax.clear()
-        colors = ['viridis', 'plasma']
+        if hasattr(self, 'colorbars'):
+            for cbar in self.colorbars:
+                cbar.remove()
+        self.colorbars = []
+
+        color_maps = ['cool', 'autumn']  # Updated color maps for higher contrast
+        scatters = []  # To keep scatter objects for colorbars
+
         for curve_index in range(2):
             points = self.curves[curve_index]['points']
             if not points:
@@ -309,12 +316,21 @@ class Window(QMainWindow):
             points = np.array(point_data)
             tck, u = splprep(points.T, s=self.curves[curve_index]['smoothing_factor'], k=self.curves[curve_index]['spline_order'], per=True, w=weights)
             new_points = splev(np.linspace(0, 1, 100), tck)
-            self.ax.scatter(new_points[0], new_points[1], c=new_points[2], cmap=colors[curve_index], label=f'Curve {curve_index + 1}')
+            
+            scatter = self.ax.scatter(new_points[0], new_points[1], c=new_points[2], cmap=color_maps[curve_index], label=f'Curve {curve_index + 1}')
+            scatters.append(scatter)
 
-        self.ax.legend()
+        # Handling colorbars
+        for i,(scatter, _) in enumerate(zip(scatters, color_maps)):
+            colorbar = self.figure.colorbar(scatter, ax=self.ax, orientation='horizontal', pad=0.1, fraction=0.02)
+            colorbar.set_label(f'Traj {i+1}')
+            self.colorbars.append(colorbar)  # Keep track of colorbars
+
         self.ax.set_xlabel('X coordinate')
         self.ax.set_ylabel('Y coordinate')
         self.ax.figure.canvas.draw()
+
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
