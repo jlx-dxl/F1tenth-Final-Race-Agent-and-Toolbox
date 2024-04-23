@@ -88,9 +88,3 @@ $ ros2 run final_race_pkg opp_agent
 
 ![ROS node running.png](https://img2.imgtp.com/2024/04/23/Sbw65zIT.png)
 
-For ROS2 node main_agent, if can not import module sklearn, try the below command first in the same terminal:
-
-```
-export PYTHONPATH=$PYTHONPATH:$(python3 -c "import site; print(site.getsitepackages()[0])")
-```
-
