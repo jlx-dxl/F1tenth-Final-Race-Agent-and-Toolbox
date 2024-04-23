@@ -140,6 +140,7 @@ class PurePursuit(Node):
         self.waypoint_pub_ = self.create_publisher(Marker, waypoint_topic, 10)
         self.waypoint_path_pub_ = self.create_publisher(Marker, waypoint_path_topic, 10)
         self.occ_grid_pub = self.create_publisher(OccupancyGrid, occ_grid_topic, 10)
+        self.scatter_pub = self.create_publisher(Marker, 'scatter', 10)
         
 ###################################################### Callbacks ############################################################
 
@@ -157,6 +158,9 @@ class PurePursuit(Node):
         x = self.curr_pos[0]
         y = self.curr_pos[1]
         yaw = self.curr_yaw
+        
+        moving_obstacle_list = []
+        
         # 遍历所有激光点
         for i, distance in enumerate(data.ranges):
             if distance > data.range_min and distance < data.range_max:
@@ -164,8 +168,8 @@ class PurePursuit(Node):
                 angle = data.angle_min + i * data.angle_increment + yaw
                 
                 # 计算激光点在地图中的坐标
-                x = x + distance * np.cos(angle)
-                y = y + distance * np.sin(angle)
+                x = (x + distance * np.cos(angle)).astype(float)
+                y = (y + distance * np.sin(angle)).astype(float)
 
                 # 转换为栅格地图的索引
                 grid_x = int((x - self.lb[0]) / self.resolution)
@@ -173,7 +177,10 @@ class PurePursuit(Node):
 
                 # 更新栅格地图
                 if 0 <= grid_x < self.grid_nx and 0 <= grid_y < self.grid_ny:
-                    self.grid_map[grid_y, grid_x] = 1
+                    if self.grid_map[grid_y, grid_x] == 0:
+                        moving_obstacle_list.append((x, y))
+        print(len(moving_obstacle_list))
+        self.visulaize_scatter(moving_obstacle_list)
         
     def pose_callback(self, pose_msg):
         if self.flag == True:  
@@ -397,6 +404,35 @@ class PurePursuit(Node):
         grid.data = self.grid_map.astype(int).flatten().tolist()
 
         self.occ_grid_pub.publish(grid)
+        
+    def visulaize_scatter(self, scatter_points):
+        marker = Marker()
+        marker.header.frame_id = "/map"  # 设置合适的参考框架
+        marker.ns = "points_and_lines"
+        marker.id = 0
+        marker.type = Marker.POINTS
+        marker.action = Marker.ADD
+        
+        # 设置Marker的尺寸
+        marker.scale.x = 0.05  # 点的大小
+        marker.scale.y = 0.05
+        
+        # 设置颜色
+        marker.color.a = 1.0  # 不透明度
+        marker.color.r = 1.0  # 红色
+        marker.color.g = 0.0  # 绿色
+        marker.color.b = 0.0  # 蓝色
+        
+        # 填充点位置
+        for (x, y) in scatter_points:
+            p = Point()
+            p.x = x
+            p.y = y
+            p.z = 0.0  # 如果是2D地图，z通常为0
+            marker.points.append(p)
+        
+        # 发布Marker
+        self.scatter_pub.publish(marker)
 
     def get_steer(self, error):
         """ Get desired steering angle by PID
