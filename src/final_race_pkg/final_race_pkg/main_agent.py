@@ -161,24 +161,44 @@ class PurePursuit(Node):
         
         moving_obstacle_list = []
         
-        # 遍历所有激光点
-        for i, distance in enumerate(data.ranges):
-            if distance > data.range_min and distance < data.range_max:
-                # 计算激光点的角度
-                angle = data.angle_min + i * data.angle_increment + yaw
+        for i in range(len(data.ranges)):
+            angle = data.angle_min + i * data.angle_increment
+            # 计算扫描点的局部坐标（相对于机器人）
+            local_x = data.ranges[i] * math.cos(angle)
+            local_y = data.ranges[i] * math.sin(angle)
+
+            # 将局部坐标转换为全局坐标
+            # 使用旋转矩阵进行坐标变换
+            global_x = x + (local_x * math.cos(yaw) - local_y * math.sin(yaw))
+            global_y = y + (local_x * math.sin(yaw) + local_y * math.cos(yaw))
+            
+            # 转换为栅格地图的索引
+            grid_x = int((global_x - self.lb[0]) / self.resolution)
+            grid_y = int((global_y - self.lb[1]) / self.resolution)
+            
+            if 0 <= grid_x < self.grid_nx and 0 <= grid_y < self.grid_ny:
+                if self.grid_map[grid_y, grid_x] == 0:
+                    moving_obstacle_list.append((global_x, global_y))
+        
+        # # 遍历所有激光点
+        # for i, distance in enumerate(data.ranges):
+        #     if distance > data.range_min and distance < data.range_max:
+        #         # 计算激光点的角度
+        #         angle = data.angle_min + i * data.angle_increment + yaw
                 
-                # 计算激光点在地图中的坐标
-                x = (x + distance * np.cos(angle)).astype(float)
-                y = (y + distance * np.sin(angle)).astype(float)
+        #         # 计算激光点在地图中的坐标
+        #         x = (x + distance * np.cos(angle)).astype(float)
+        #         y = (y + distance * np.sin(angle)).astype(float)
 
-                # 转换为栅格地图的索引
-                grid_x = int((x - self.lb[0]) / self.resolution)
-                grid_y = int((y - self.lb[1]) / self.resolution)
+        #         # 转换为栅格地图的索引
+        #         grid_x = int((x - self.lb[0]) / self.resolution)
+        #         grid_y = int((y - self.lb[1]) / self.resolution)
 
-                # 更新栅格地图
-                if 0 <= grid_x < self.grid_nx and 0 <= grid_y < self.grid_ny:
-                    if self.grid_map[grid_y, grid_x] == 0:
-                        moving_obstacle_list.append((x, y))
+        #         # 更新栅格地图
+        #         if 0 <= grid_x < self.grid_nx and 0 <= grid_y < self.grid_ny:
+        #             if self.grid_map[grid_y, grid_x] == 0:
+        #                 moving_obstacle_list.append((x, y))
+        
         print(len(moving_obstacle_list))
         self.visulaize_scatter(moving_obstacle_list)
         
