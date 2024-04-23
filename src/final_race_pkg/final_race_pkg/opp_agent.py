@@ -56,7 +56,7 @@ class PurePursuit(Node):
         self.flag = False
 
         # TODO: Get target x and y from pre-calculated waypoints
-        waypoints = np.loadtxt(csv_loc, delimiter=',')
+        waypoints = np.loadtxt(csv_loc, delimiter=',',skiprows=1)
         self.x_list = waypoints[:, 0]
         self.y_list = waypoints[:, 1]
         self.v_list = waypoints[:, 2]
