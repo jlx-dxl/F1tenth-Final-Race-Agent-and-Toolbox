@@ -55,7 +55,7 @@ Then run the script in the folder where it is:
 
 ```
 $ cd src/final_race_pkg/final_race_pkg/
-$ python3 traj_killer_scripts.py
+$ python3 traj_killer_script.py
 ```
 The two json file are used to memorize your configs, the app will try to load them every time it is launched, so that you do not need to input all the waypoints and parameters every time. If you want to set up your own waypoints, just delete them, you will get an empty input area like below and you can add waypoints yourself (remember you need to click the `Save Curve` botton to save the json files).
 
