@@ -71,6 +71,7 @@ class PurePursuit(Node):
         self.v_min = np.min(self.v_list)
         
         # initialize grid map
+        # 这个地图需要被精细建模，后面用于滤掉静态障碍物
         # 初始化代码
         self.lb = (-6.0, -3.5)  # 左下角的物理坐标
         self.rt = (12.0, 12.0)  # 右上角的物理坐标
@@ -82,8 +83,8 @@ class PurePursuit(Node):
         self.grid_ny = int(height)
 
         # 物理坐标阈值
-        x_low = -4
-        y_low = -1.5
+        x_low = -3.8
+        y_low = -1.2
         x_high = 10
         y_high = 10
 
@@ -106,8 +107,8 @@ class PurePursuit(Node):
         self.grid_map[y_high_idx:, :] = 1  # y > 10
         
         # 添加矩形障碍物
-        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (2.7, 4.0), (10.0, 10.0))
-        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (-1.7, 0.6), (-1.0, 6.5))
+        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (2.5, 3.8), (10.0, 10.0))
+        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (-1.9, 0.4), (-0.6, 6.7))
         self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (-1.7, 0.6), (5.5, 1.4))
 
         # # 使用matplotlib可视化地图
@@ -179,25 +180,6 @@ class PurePursuit(Node):
             if 0 <= grid_x < self.grid_nx and 0 <= grid_y < self.grid_ny:
                 if self.grid_map[grid_y, grid_x] == 0:
                     moving_obstacle_list.append((global_x, global_y))
-        
-        # # 遍历所有激光点
-        # for i, distance in enumerate(data.ranges):
-        #     if distance > data.range_min and distance < data.range_max:
-        #         # 计算激光点的角度
-        #         angle = data.angle_min + i * data.angle_increment + yaw
-                
-        #         # 计算激光点在地图中的坐标
-        #         x = (x + distance * np.cos(angle)).astype(float)
-        #         y = (y + distance * np.sin(angle)).astype(float)
-
-        #         # 转换为栅格地图的索引
-        #         grid_x = int((x - self.lb[0]) / self.resolution)
-        #         grid_y = int((y - self.lb[1]) / self.resolution)
-
-        #         # 更新栅格地图
-        #         if 0 <= grid_x < self.grid_nx and 0 <= grid_y < self.grid_ny:
-        #             if self.grid_map[grid_y, grid_x] == 0:
-        #                 moving_obstacle_list.append((x, y))
         
         print(len(moving_obstacle_list))
         self.visulaize_scatter(moving_obstacle_list)
