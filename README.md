@@ -19,6 +19,8 @@ After that, the structure of your workspace should be like this:
 ├── build
 ├── install
 ├── log
+├── README.md
+├── requirements.txt
 └── src/final_race_pkg
     ├── final_race_pkg
         ├── final_race_pkg
@@ -55,4 +57,33 @@ Then run the script in the folder where it is:
 $ cd src/final_race_pkg/final_race_pkg/
 $ python3 traj_killer_scripts.py
 ```
-The two json file are used to memorize your configs, it will be tried to load every time the app is launched, so that you do not need to input all the waypoints and parameters every time. If you want to set up your own waypoints, just delete them, you will get an empty input area and you can add waypoints yourself.
+The two json file are used to memorize your configs, the app will try to load them every time it is launched, so that you do not need to input all the waypoints and parameters every time. If you want to set up your own waypoints, just delete them, you will get an empty input area like below and you can add waypoints yourself (remember you need to click the `Save Curve` botton to save the json files).
+
+![empty](https://imgur.com/a/7vL8twI)
+
+If the following shows up, it means the json files are loaded successfully, then you can directly click the `Plot All Curves` to see the plot.
+
+![initialized](https://imgur.com/a/uTWTRl2)
+
+Then you can change the coordinates, weights of the waypoints and parameters of the spline curve with interactive input boxes, slides and bottons. Every time you click a botton or change the value of a slide, the plot will update itself.
+
+### traj_killer.py
+
+This is the ROS2 node version of this GUI app, it will publish the trajectory into two topics called `traj_inner` (corresponding to Curve1) and `traj_outer` (corresponding to Curve2). Run the node by the below command:
+
+```
+$ ros2 run final_race_pkg traj_killer
+```
+
+The user interface is the same as the script version, but remember only when you click the `Save Curve` botton, will the trajectory be published.
+
+Then if you launch the f1tenth_gym and run the two agents, you can see the trajectories are changed once you publish any new trajectory. (You need to copy the two json file into the workspace folder to get the node initialized)
+
+```
+# in different terminals, run:
+$ ros2 launch f1tenth_gym_ros gym_bridge_launch.py 
+$ ros2 run final_race_pkg main_agent
+$ ros2 run final_race_pkg opp_agent 
+```
+
+![alt text](URL "Optional title")
