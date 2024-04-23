@@ -59,11 +59,11 @@ $ python3 traj_killer_scripts.py
 ```
 The two json file are used to memorize your configs, the app will try to load them every time it is launched, so that you do not need to input all the waypoints and parameters every time. If you want to set up your own waypoints, just delete them, you will get an empty input area like below and you can add waypoints yourself (remember you need to click the `Save Curve` botton to save the json files).
 
-![empty](https://imgur.com/a/7vL8twI)
+![empty interface.png](https://img2.imgtp.com/2024/04/23/2bs76gTt.png)
 
 If the following shows up, it means the json files are loaded successfully, then you can directly click the `Plot All Curves` to see the plot.
 
-![initialized](https://imgur.com/a/uTWTRl2)
+![initialed interface.png](https://img2.imgtp.com/2024/04/23/RfUVBaAv.png)
 
 Then you can change the coordinates, weights of the waypoints and parameters of the spline curve with interactive input boxes, slides and bottons. Every time you click a botton or change the value of a slide, the plot will update itself.
 
@@ -86,4 +86,5 @@ $ ros2 run final_race_pkg main_agent
 $ ros2 run final_race_pkg opp_agent 
 ```
 
-![alt text](URL "Optional title")
+![ROS node running.png](https://img2.imgtp.com/2024/04/23/Sbw65zIT.png)
+
