@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from os.path import join
 
 # get the file path for this package
-csv_loc = '/home/lucien/ESE6150/final_race/curve_best_sim.csv'
+csv_loc = '/home/nvidia/f1tenth_ws/src/F1tenth-Final-Race-Agent-and-Toolbox/curve_best_sim.csv'
 
 #  Constants from xacro
 WIDTH = 0.2032  # (m)
