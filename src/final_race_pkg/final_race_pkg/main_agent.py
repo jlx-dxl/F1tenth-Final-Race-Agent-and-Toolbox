@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import rclpy
 from rclpy.node import Node
 # from tf_transformations import euler_from_quaternion
@@ -41,7 +42,7 @@ class PurePursuit(Node):
         self.declare_parameter('lookahead_points', 12)      # to calculate yaw diff
         self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
         self.declare_parameter('L_slope_atten', 0.5)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
-
+        self.declare_parameter('n_cluster', 5)
         self.declare_parameter('kp', 0.55)
         self.declare_parameter('ki', 0.0)
         self.declare_parameter('kd', 0.005)
@@ -142,6 +143,7 @@ class PurePursuit(Node):
         self.waypoint_path_pub_ = self.create_publisher(Marker, waypoint_path_topic, 10)
         self.occ_grid_pub = self.create_publisher(OccupancyGrid, occ_grid_topic, 10)
         self.scatter_pub = self.create_publisher(Marker, 'scatter', 10)
+        self.oppo_curr_pub = self.create_publisher(Marker, 'curr_opp', 10)
         
 ###################################################### Callbacks ############################################################
 
@@ -181,8 +183,15 @@ class PurePursuit(Node):
                 if self.grid_map[grid_y, grid_x] == 0:
                     moving_obstacle_list.append((global_x, global_y))
         
-        print(len(moving_obstacle_list))
         self.visulaize_scatter(moving_obstacle_list)
+        
+        k = self.get_parameter('n_cluster').get_parameter_value().integer_value
+        
+        if len(moving_obstacle_list) > k:
+        
+            curr_opp_position = self.find_densest_cluster_center(moving_obstacle_list, k)
+            
+            self.visulaize_curr_opp(curr_opp_position)
         
     def pose_callback(self, pose_msg):
         if self.flag == True:  
@@ -326,6 +335,34 @@ class PurePursuit(Node):
         L = max(0.5, L * ((np.pi / 2 - yaw_diff * slope) / (np.pi / 2)))
 
         return L
+    
+    def k_means(self, points, k, max_iters=100):
+        # 随机初始化聚类中心
+        points = np.array(points)
+        centers = np.array(points[np.random.choice(len(points), k, replace=False)])
+        for _ in range(max_iters):
+            # 分配点到最近的中心
+            clusters = [[] for _ in range(k)]
+            for point in points:
+                distances = np.linalg.norm(np.array(point) - centers, axis=1)
+                cluster_index = np.argmin(distances)
+                clusters[cluster_index].append(point)
+
+            # 更新中心点
+            new_centers = np.array([np.mean(cluster, axis=0) if cluster else centers[i] for i, cluster in enumerate(clusters)])
+            if np.allclose(centers, new_centers):
+                break
+            centers = new_centers
+
+        return centers, clusters
+
+    def find_densest_cluster_center(self, points, k):
+        centers, clusters = self.k_means(points, k)
+        # 找到最大的簇
+        largest_cluster_index = np.argmax([len(cluster) for cluster in clusters])
+        # 计算这个簇的中心
+        densest_center = np.mean(clusters[largest_cluster_index], axis=0)
+        return densest_center
 
     def visualize_waypoints(self):
         # TODO: publish the waypoints properly
@@ -410,14 +447,14 @@ class PurePursuit(Node):
     def visulaize_scatter(self, scatter_points):
         marker = Marker()
         marker.header.frame_id = "/map"  # 设置合适的参考框架
-        marker.ns = "points_and_lines"
+        marker.ns = "scatters"
         marker.id = 0
         marker.type = Marker.POINTS
         marker.action = Marker.ADD
         
         # 设置Marker的尺寸
-        marker.scale.x = 0.05  # 点的大小
-        marker.scale.y = 0.05
+        marker.scale.x = 0.1  # 点的大小
+        marker.scale.y = 0.1
         
         # 设置颜色
         marker.color.a = 1.0  # 不透明度
@@ -435,6 +472,34 @@ class PurePursuit(Node):
         
         # 发布Marker
         self.scatter_pub.publish(marker)
+        
+    def visulaize_curr_opp(self, point):
+        marker = Marker()
+        marker.header.frame_id = "/map"  # 设置合适的参考框架
+        marker.ns = "oppenent_current_estimation"
+        marker.id = 0
+        marker.type = Marker.POINTS
+        marker.action = Marker.ADD
+        
+        # 设置Marker的尺寸
+        marker.scale.x = 0.2  # 点的大小
+        marker.scale.y = 0.2
+        
+        # 设置颜色
+        marker.color.a = 1.0  # 不透明度
+        marker.color.r = 1.0  # 红色
+        marker.color.g = 0.0  # 绿色
+        marker.color.b = 1.0  # 蓝色
+        
+
+        p = Point()
+        p.x = point[0]
+        p.y = point[1]
+        p.z = 0.0  # 如果是2D地图，z通常为0
+        marker.points.append(p)
+        
+        # 发布Marker
+        self.oppo_curr_pub.publish(marker)
 
     def get_steer(self, error):
         """ Get desired steering angle by PID
