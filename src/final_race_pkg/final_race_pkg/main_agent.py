@@ -18,6 +18,7 @@ from std_msgs.msg import ColorRGBA
 import matplotlib.pyplot as plt
 
 from os.path import join
+from .util import *
 
 # get the file path for this package
 # csv_loc = '/home/nvidia/f1tenth_ws/src/F1tenth-Final-Race-Agent-and-Toolbox/curve_best_sim.csv'
@@ -27,7 +28,6 @@ csv_loc = '/home/lucien/ESE6150/final_race/curve1.csv'
 WIDTH = 0.2032  # (m)
 WHEEL_LENGTH = 0.0381  # (m)
 MAX_STEER = 0.36  # (rad)
-
 
 class PurePursuit(Node):
     """ 
@@ -40,10 +40,10 @@ class PurePursuit(Node):
 
         # Params
         # self.declare_parameter('if_real', False)
-        self.declare_parameter('lookahead_distance', 2.4)
-        self.declare_parameter('lookahead_points', 21)      # to calculate yaw diff
-        self.declare_parameter('lookbehind_points', 3)      # to eliminate the influence of latency
-        self.declare_parameter('L_slope_atten', 0.3)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
+        self.declare_parameter('lookahead_distance', 2.1)
+        self.declare_parameter('lookahead_points', 18)      # to calculate yaw diff
+        self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
+        self.declare_parameter('L_slope_atten', 0.4)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
         self.declare_parameter('n_cluster', 5)
         self.declare_parameter('kp', 0.55)
         self.declare_parameter('ki', 0.0)
@@ -110,10 +110,15 @@ class PurePursuit(Node):
         self.grid_map[y_high_idx:, :] = 1  # y > 10
         
         # 添加矩形障碍物
-        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (9.3, 14.0), (15.3, 21.0))
-        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (12.7, 9.7), (18.7, 10.7))
-        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (17.8, 9.7), (18.5, 16.9))
-        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (19.2, 7.1), (21.0, 8.0))
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (9.3, 13.8), (15.5, 21.0))   # 左上角的
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (12.5, 9.5), (18.8, 10.8))   # L弯底边
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (17.6, 9.7), (18.7, 17.1))   # L弯竖边
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (19.2, 7.1), (21.0, 8.0))    # 右下角
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (9.8, 7.3), (11.1, 8.5))   # 左下角
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (15.0, 19.0), (21.0, 21.0))   # 顶部
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (9.8, 7.3), (20.0, 7.7))   # 底部
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (20.8, 7.5), (21.0, 21.0))   # 底部
+
 
         # # 使用matplotlib可视化地图
         # plt.figure(figsize=(10, 10))
@@ -149,7 +154,6 @@ class PurePursuit(Node):
         self.oppo_curr_pub = self.create_publisher(Marker, 'curr_opp', 10)
         
 ###################################################### Callbacks ############################################################
-    @jit(nopython=True)
     def listener_callback_inner(self, msg):
         trajectory_array = np.array(msg.data, dtype=np.float32).reshape((200, 4)).astype(float)
         self.x_list = trajectory_array[:, 0]
@@ -165,34 +169,26 @@ class PurePursuit(Node):
         y = self.curr_pos[1]
         yaw = self.curr_yaw
         
-        moving_obstacle_list = []
+        ranges = data.ranges
+        angle_increment = data.angle_increment
+        angle_min = data.angle_min
         
-        for i in range(len(data.ranges)):
-            angle = data.angle_min + i * data.angle_increment
-            # 计算扫描点的局部坐标（相对于机器人）
-            local_x = data.ranges[i] * math.cos(angle)
-            local_y = data.ranges[i] * math.sin(angle)
-
-            # 将局部坐标转换为全局坐标
-            # 使用旋转矩阵进行坐标变换
-            global_x = x + (local_x * math.cos(yaw) - local_y * math.sin(yaw))
-            global_y = y + (local_x * math.sin(yaw) + local_y * math.cos(yaw))
-            
-            # 转换为栅格地图的索引
-            grid_x = int((global_x - self.lb[0]) / self.resolution)
-            grid_y = int((global_y - self.lb[1]) / self.resolution)
-            
-            if 0 <= grid_x < self.grid_nx and 0 <= grid_y < self.grid_ny:
-                if self.grid_map[grid_y, grid_x] == 0:
-                    moving_obstacle_list.append((global_x, global_y))
+        lb = self.lb
+        rt = self.rt
+        res = self.resolution
+        grid_map = self.grid_map
+        
+        moving_obstacle_list = get_move_obstacle_list(ranges, angle_increment, angle_min, x, y, yaw, lb, rt, res, grid_map)
         
         self.visulaize_scatter(moving_obstacle_list)
         
         k = self.get_parameter('n_cluster').get_parameter_value().integer_value
         
         if len(moving_obstacle_list) > k:
-        
-            curr_opp_position = self.find_densest_cluster_center(moving_obstacle_list, k)
+            
+            moving_obstacle_list = np.array(moving_obstacle_list, dtype=np.float64)
+            curr_opp_position = find_densest_cluster_center(moving_obstacle_list, k)
+            print(curr_opp_position)
             
             self.visulaize_curr_opp(curr_opp_position)
         
@@ -228,7 +224,8 @@ class PurePursuit(Node):
         if yaw_diff < -np.pi:
             yaw_diff = yaw_diff + 2 * np.pi
         yaw_diff = abs(yaw_diff)
-        L = self.decrease_lookahead(L, yaw_diff)
+        slope = self.get_parameter('L_slope_atten').get_parameter_value().double_value
+        L = decrease_lookahead(L, yaw_diff, slope)
         gamma = 2 / L ** 2  # curvature of arc
 
         # TODO: find the current waypoint to track using methods mentioned in lecture
@@ -244,7 +241,7 @@ class PurePursuit(Node):
         close_point = self.xyv_list[min_idx % distances.shape[0], :]
         far_point = self.xyv_list[next_idx % distances.shape[0], :]
         dist_btwn_ends = np.linalg.norm(far_point - close_point)
-        guess_point = self.proj_along(close_point, far_point, dist_btwn_ends / 2)
+        guess_point = proj_along(close_point, far_point, dist_btwn_ends / 2)
         dist_to_guess = np.linalg.norm(self.curr_pos - guess_point)
         num_iters = 0
         while (abs(dist_to_guess - L) > 0.01):
@@ -257,7 +254,7 @@ class PurePursuit(Node):
                 dist_btwn_ends = np.linalg.norm(far_point - close_point)
                 direction = 1  # go forward
             # recalculate
-            guess_point = self.proj_along(close_point, far_point, direction * dist_btwn_ends / 2)
+            guess_point = proj_along(close_point, far_point, direction * dist_btwn_ends / 2)
             dist_to_guess = np.linalg.norm(self.curr_pos - guess_point)
             num_iters = num_iters + 1
         self.target_point = guess_point
@@ -285,87 +282,7 @@ class PurePursuit(Node):
         # visualize the occupancy grid
         self.visulize_occ_grid()
 
-########################################################## Helper Functions ########################################################
-
-    def mark_rectangle_on_grid(self, lb, rt, resolution, rect_lb, rect_rt):
-        """
-        Marks a rectangular area on a grid map as occupied, based on the bottom-left and top-right corners.
-
-        :param grid_map: numpy array representing the grid map
-        :param lb: tuple, the physical world coordinates of the bottom-left corner of the grid map
-        :param rt: tuple, the physical world coordinates of the top-right corner of the grid map
-        :param resolution: float, the resolution of the grid map in meters per grid cell
-        :param rect_lb: tuple, the physical world coordinates of the bottom-left corner of the rectangle
-        :param rect_rt: tuple, the physical world coordinates of the top-right corner of the rectangle
-        """
-        # Calculate the grid indices for the rectangle corners
-        rect_lb_idx_x = int((rect_lb[0] - lb[0]) / resolution)
-        rect_lb_idx_y = int((rect_lb[1] - lb[1]) / resolution)
-        rect_rt_idx_x = int((rect_rt[0] - lb[0]) / resolution)
-        rect_rt_idx_y = int((rect_rt[1] - lb[1]) / resolution)
-
-        # Ensure indices are within the grid boundaries
-        rect_lb_idx_x = max(0, min(rect_lb_idx_x, self.grid_map.shape[1] - 1))
-        rect_lb_idx_y = max(0, min(rect_lb_idx_y, self.grid_map.shape[0] - 1))
-        rect_rt_idx_x = max(0, min(rect_rt_idx_x, self.grid_map.shape[1] - 1))
-        rect_rt_idx_y = max(0, min(rect_rt_idx_y, self.grid_map.shape[0] - 1))
-
-        # Mark the rectangular area on the grid map
-        # Ensure to capture all cells within the specified rectangle
-        min_x = min(rect_lb_idx_x, rect_rt_idx_x)
-        max_x = max(rect_lb_idx_x, rect_rt_idx_x)
-        min_y = min(rect_lb_idx_y, rect_rt_idx_y)
-        max_y = max(rect_lb_idx_y, rect_rt_idx_y)
-
-        self.grid_map[min_y:max_y+1, min_x:max_x+1] = 1
-    
-    # travel a certain distance from one point in the direction of another
-    def proj_along(self, start, target, dist):
-        # find unit vector from start to target
-        vect = target - start
-        if (np.linalg.norm(vect) < 0.0001):
-            return start
-        unit = vect / np.linalg.norm(vect)
-        # travel that distance
-        new_point = dist * unit + start
-        return new_point
-
-    def decrease_lookahead(self, L, yaw_diff):
-        slope = self.get_parameter('L_slope_atten').get_parameter_value().double_value
-        # print(yaw_diff)
-        if (yaw_diff > np.pi / 2):
-            yaw_diff = np.pi / 2
-        L = max(0.5, L * ((np.pi / 2 - yaw_diff * slope) / (np.pi / 2)))
-
-        return L
-    
-    def k_means(self, points, k, max_iters=100):
-        # 随机初始化聚类中心
-        points = np.array(points)
-        centers = np.array(points[np.random.choice(len(points), k, replace=False)])
-        for _ in range(max_iters):
-            # 分配点到最近的中心
-            clusters = [[] for _ in range(k)]
-            for point in points:
-                distances = np.linalg.norm(np.array(point) - centers, axis=1)
-                cluster_index = np.argmin(distances)
-                clusters[cluster_index].append(point)
-
-            # 更新中心点
-            new_centers = np.array([np.mean(cluster, axis=0) if cluster else centers[i] for i, cluster in enumerate(clusters)])
-            if np.allclose(centers, new_centers):
-                break
-            centers = new_centers
-
-        return centers, clusters
-
-    def find_densest_cluster_center(self, points, k):
-        centers, clusters = self.k_means(points, k)
-        # 找到最大的簇
-        largest_cluster_index = np.argmax([len(cluster) for cluster in clusters])
-        # 计算这个簇的中心
-        densest_center = np.mean(clusters[largest_cluster_index], axis=0)
-        return densest_center
+################################################### Visualization ################################################33
 
     def visualize_waypoints(self):
         # TODO: publish the waypoints properly

@@ -88,3 +88,6 @@ $ ros2 run final_race_pkg opp_agent
 
 ![ROS node running.png](https://img2.imgtp.com/2024/04/23/Sbw65zIT.png)
 
+### Log for 0423
+
+Exploring Numba acceleration. Numba can only be used on functions with basic data stucture (can not deal with objects), so I need to extract data process part inside ROS Callback funtions (where the logistic is implemented) out and make them as functions. 
