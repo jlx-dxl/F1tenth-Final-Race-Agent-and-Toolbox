@@ -17,7 +17,7 @@ from std_msgs.msg import ColorRGBA
 from os.path import join
 
 # get the file path for this package
-csv_loc = '/home/lucien/ESE6150/final_race/curve_best_sim.csv'
+csv_loc = '/home/lucien/ESE6150/final_race/curve2.csv'
 
 #  Constants from xacro
 WIDTH = 0.2032  # (m)
@@ -35,8 +35,8 @@ class PurePursuit(Node):
 
         # Params
         # self.declare_parameter('if_real', False)
-        self.declare_parameter('lookahead_distance', 2.1)
-        self.declare_parameter('lookahead_points', 12)      # to calculate yaw diff
+        self.declare_parameter('lookahead_distance', 2.4)
+        self.declare_parameter('lookahead_points', 21)      # to calculate yaw diff
         self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
         self.declare_parameter('L_slope_atten', 0.5)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
 

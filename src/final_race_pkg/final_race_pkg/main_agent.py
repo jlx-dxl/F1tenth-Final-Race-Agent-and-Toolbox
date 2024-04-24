@@ -6,6 +6,7 @@ from rclpy.node import Node
 import math
 
 import numpy as np
+from numba import jit
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Float32MultiArray, Header
 from ackermann_msgs.msg import AckermannDriveStamped, AckermannDrive
@@ -19,7 +20,8 @@ import matplotlib.pyplot as plt
 from os.path import join
 
 # get the file path for this package
-csv_loc = '/home/nvidia/f1tenth_ws/src/F1tenth-Final-Race-Agent-and-Toolbox/curve_best_sim.csv'
+# csv_loc = '/home/nvidia/f1tenth_ws/src/F1tenth-Final-Race-Agent-and-Toolbox/curve_best_sim.csv'
+csv_loc = '/home/lucien/ESE6150/final_race/curve1.csv'
 
 #  Constants from xacro
 WIDTH = 0.2032  # (m)
@@ -38,10 +40,10 @@ class PurePursuit(Node):
 
         # Params
         # self.declare_parameter('if_real', False)
-        self.declare_parameter('lookahead_distance', 2.1)
-        self.declare_parameter('lookahead_points', 12)      # to calculate yaw diff
-        self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
-        self.declare_parameter('L_slope_atten', 0.5)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
+        self.declare_parameter('lookahead_distance', 2.4)
+        self.declare_parameter('lookahead_points', 21)      # to calculate yaw diff
+        self.declare_parameter('lookbehind_points', 3)      # to eliminate the influence of latency
+        self.declare_parameter('L_slope_atten', 0.3)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
         self.declare_parameter('n_cluster', 5)
         self.declare_parameter('kp', 0.55)
         self.declare_parameter('ki', 0.0)
@@ -74,8 +76,8 @@ class PurePursuit(Node):
         # initialize grid map
         # 这个地图需要被精细建模，后面用于滤掉静态障碍物
         # 初始化代码
-        self.lb = (-6.0, -3.5)  # 左下角的物理坐标
-        self.rt = (12.0, 12.0)  # 右上角的物理坐标
+        self.lb = (7.0, 4.5)  # 左下角的物理坐标
+        self.rt = (23.6, 24.0)  # 右上角的物理坐标
         self.resolution = 0.1
         width = abs(self.lb[0] - self.rt[0]) / self.resolution
         height = abs(self.lb[1] - self.rt[1]) / self.resolution
@@ -84,10 +86,10 @@ class PurePursuit(Node):
         self.grid_ny = int(height)
 
         # 物理坐标阈值
-        x_low = -3.8
-        y_low = -1.2
-        x_high = 10
-        y_high = 10
+        x_low = 10.0
+        y_low = 7.5
+        x_high = 20.8
+        y_high = 21.0
 
         # 转换为栅格索引
         x_low_idx = int((x_low - self.lb[0]) / self.resolution)
@@ -108,9 +110,10 @@ class PurePursuit(Node):
         self.grid_map[y_high_idx:, :] = 1  # y > 10
         
         # 添加矩形障碍物
-        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (2.5, 3.8), (10.0, 10.0))
-        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (-1.9, 0.4), (-0.6, 6.7))
-        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (-1.7, 0.6), (5.5, 1.4))
+        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (9.3, 14.0), (15.3, 21.0))
+        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (12.7, 9.7), (18.7, 10.7))
+        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (17.8, 9.7), (18.5, 16.9))
+        self.mark_rectangle_on_grid(self.lb, self.rt, self.resolution, (19.2, 7.1), (21.0, 8.0))
 
         # # 使用matplotlib可视化地图
         # plt.figure(figsize=(10, 10))
@@ -146,7 +149,7 @@ class PurePursuit(Node):
         self.oppo_curr_pub = self.create_publisher(Marker, 'curr_opp', 10)
         
 ###################################################### Callbacks ############################################################
-
+    @jit(nopython=True)
     def listener_callback_inner(self, msg):
         trajectory_array = np.array(msg.data, dtype=np.float32).reshape((200, 4)).astype(float)
         self.x_list = trajectory_array[:, 0]
@@ -156,7 +159,7 @@ class PurePursuit(Node):
         self.yaw_list = trajectory_array[:, 3]
         self.v_max = np.max(self.v_list)
         self.v_min = np.min(self.v_list)
-        
+    
     def laser_scan_callback(self, data):
         x = self.curr_pos[0]
         y = self.curr_pos[1]
