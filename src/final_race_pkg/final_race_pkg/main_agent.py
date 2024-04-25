@@ -147,8 +147,8 @@ class PurePursuit(Node):
             print(odom_topic + " initialized")
             
         drive_topic = '/drive'
-        waypoint_topic = '/ego_waypoint'
-        waypoint_path_topic = '/ego_trajectory'
+        waypoint_topic = '/waypoint'
+        waypoint_path_topic = '/waypoint_path'
         occ_grid_topic = '/gridmap'
 
         self.traj_published = False
