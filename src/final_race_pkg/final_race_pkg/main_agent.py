@@ -6,13 +6,12 @@ from rclpy.node import Node
 import math
 
 import numpy as np
-from numba import jit
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Float32MultiArray, Header
-from ackermann_msgs.msg import AckermannDriveStamped, AckermannDrive
+from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry, OccupancyGrid
-from visualization_msgs.msg import Marker, MarkerArray
+from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point
 from std_msgs.msg import ColorRGBA
 import matplotlib.pyplot as plt
@@ -38,7 +37,7 @@ class PurePursuit(Node):
     def __init__(self):
         super().__init__('pure_pursuit_node')
 
-        # Params
+        ####################################### Params ##########################################
         # self.declare_parameter('if_real', False)
         self.declare_parameter('lookahead_distance', 2.1)
         self.declare_parameter('lookahead_points', 18)      # to calculate yaw diff
@@ -60,8 +59,8 @@ class PurePursuit(Node):
         self.curr_yaw = 0.0
         
         #self.flag = self.get_parameter('lookahead_distance').get_parameter_value().bool_value
-        #print(self.flag)
         self.flag = False
+        print("if real world test? ", self.flag)
 
         # TODO: Get target x and y from pre-calculated waypoints
         waypoints = np.loadtxt(csv_loc, delimiter=',',skiprows=1)
@@ -73,7 +72,7 @@ class PurePursuit(Node):
         self.v_max = np.max(self.v_list)
         self.v_min = np.min(self.v_list)
         
-        # initialize grid map
+        #################################### initialize grid map ################################
         # 这个地图需要被精细建模，后面用于滤掉静态障碍物
         # 初始化代码
         self.lb = (7.0, 4.5)  # 左下角的物理坐标
@@ -130,7 +129,7 @@ class PurePursuit(Node):
         # plt.grid(False)
         # plt.show()
 
-        # Topics & Subs, Pubs
+        #################################### Topics & Subs, Pubs ######################################
         
         if self.flag == True:  
             odom_topic = '/pf/viz/inferred_pose'
@@ -152,8 +151,10 @@ class PurePursuit(Node):
         self.occ_grid_pub = self.create_publisher(OccupancyGrid, occ_grid_topic, 10)
         self.scatter_pub = self.create_publisher(Marker, 'scatter', 10)
         self.oppo_curr_pub = self.create_publisher(Marker, 'curr_opp', 10)
+
         
 ###################################################### Callbacks ############################################################
+    
     def listener_callback_inner(self, msg):
         trajectory_array = np.array(msg.data, dtype=np.float32).reshape((200, 4)).astype(float)
         self.x_list = trajectory_array[:, 0]
