@@ -49,6 +49,8 @@ class PurePursuit(Node):
         self.declare_parameter('kd', 0.005)
         self.declare_parameter("max_control", MAX_STEER)
         self.declare_parameter("steer_alpha", 1.0)
+        
+        print("finished declaring parameters")
 
         # PID Control Params
         self.prev_error = 0.0
@@ -71,6 +73,8 @@ class PurePursuit(Node):
         self.yaw_list = waypoints[:, 3]
         self.v_max = np.max(self.v_list)
         self.v_min = np.min(self.v_list)
+        
+        print("finished loading waypoints")
         
         #################################### initialize grid map ################################
         # 这个地图需要被精细建模，后面用于滤掉静态障碍物
@@ -128,29 +132,42 @@ class PurePursuit(Node):
         # plt.ylabel('Y coordinate (meters)')
         # plt.grid(False)
         # plt.show()
+        
+        print("finished initializing grid map")
 
         #################################### Topics & Subs, Pubs ######################################
         
         if self.flag == True:  
             odom_topic = '/pf/viz/inferred_pose'
             self.odom_sub_ = self.create_subscription(PoseStamped, odom_topic, self.pose_callback, 10)
+            print(odom_topic + " initialized")
         else:
             odom_topic = '/ego_racecar/odom'
             self.odom_sub_ = self.create_subscription(Odometry, odom_topic, self.pose_callback, 10)
+            print(odom_topic + " initialized")
+            
         drive_topic = '/drive'
         waypoint_topic = '/ego_waypoint'
         waypoint_path_topic = '/ego_trajectory'
         occ_grid_topic = '/gridmap'
 
         self.traj_published = False
-        self.traj_sub = self.create_subscription(Float32MultiArray, 'traj_inner', self.listener_callback_inner, 10)
+        self.traj_sub = self.create_subscription(Float32MultiArray, '/traj_inner', self.listener_callback_inner, 10)
+        print("traj_sub initialized, topic: " + '/traj_inner')
         self.scan_sub_ = self.create_subscription(LaserScan, '/scan', self.laser_scan_callback, 10)
+        print("scan_sub_ initialized, topic: " + '/scan')
         self.drive_pub_ = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
+        print("drive_pub_ initialized, topic: " + drive_topic)
         self.waypoint_pub_ = self.create_publisher(Marker, waypoint_topic, 10)
+        print("waypoint_pub_ initialized, topic: " + waypoint_topic)
         self.waypoint_path_pub_ = self.create_publisher(Marker, waypoint_path_topic, 10)
+        print("waypoint_path_pub_ initialized, topic: " + waypoint_path_topic)
         self.occ_grid_pub = self.create_publisher(OccupancyGrid, occ_grid_topic, 10)
-        self.scatter_pub = self.create_publisher(Marker, 'scatter', 10)
-        self.oppo_curr_pub = self.create_publisher(Marker, 'curr_opp', 10)
+        print("occ_grid_pub initialized, topic: " + occ_grid_topic)
+        self.scatter_pub = self.create_publisher(Marker, '/scatter', 10)
+        print("scatter_pub initialized, topic: " + '/scatter')
+        self.oppo_curr_pub = self.create_publisher(Marker, '/curr_opp', 10)
+        print("oppo_curr_pub initialized, topic: " + '/curr_opp')
 
         
 ###################################################### Callbacks ############################################################

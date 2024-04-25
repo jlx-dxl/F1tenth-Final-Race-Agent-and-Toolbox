@@ -46,6 +46,7 @@ class PurePursuit(Node):
         self.declare_parameter("max_control", MAX_STEER)
         self.declare_parameter("steer_alpha", 1.0)
 
+        print("finished declaring parameters")
         # PID Control Params
         self.prev_error = 0.0
         self.integral = 0.0
@@ -54,7 +55,7 @@ class PurePursuit(Node):
         #self.flag = self.get_parameter('lookahead_distance').get_parameter_value().bool_value
         #print(self.flag)
         self.flag = False
-        print(self.flag)
+        print("if real world test? ", self.flag)
 
         # TODO: Get target x and y from pre-calculated waypoints
         waypoints = np.loadtxt(csv_loc, delimiter=',')
@@ -65,24 +66,30 @@ class PurePursuit(Node):
         self.yaw_list = waypoints[:, 3]
         self.v_max = np.max(self.v_list)
         self.v_min = np.min(self.v_list)
+        print("finished loading waypoints")
 
         # Topics & Subs, Pubs
         
         if self.flag == True:  
             odom_topic = '/pf/viz/inferred_pose'
             self.odom_sub_ = self.create_subscription(PoseStamped, odom_topic, self.pose_callback, 10)
+            print(odom_topic + " initialized")
         else:
             odom_topic = '/ego_racecar/odom'
             self.odom_sub_ = self.create_subscription(Odometry, odom_topic, self.pose_callback, 10)
+            print(odom_topic + " initialized")
         drive_topic = '/drive'
         waypoint_topic = '/waypoint'
         waypoint_path_topic = '/waypoint_path'
 
         self.traj_published = False
         self.drive_pub_ = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
+        print("drive_pub_ initialized, topic: " + drive_topic)
         self.waypoint_pub_ = self.create_publisher(Marker, waypoint_topic, 10)
+        print("waypoint_pub_ initialized, topic: " + waypoint_topic)
         self.waypoint_path_pub_ = self.create_publisher(Marker, waypoint_path_topic, 10)
-
+        print("waypoint_path_pub_ initialized, topic: " + waypoint_path_topic)
+        
     def pose_callback(self, pose_msg):
         if self.flag == True:  
             curr_x = pose_msg.pose.position.x
