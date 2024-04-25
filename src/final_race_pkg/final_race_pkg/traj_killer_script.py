@@ -12,7 +12,6 @@ from PyQt5.QtCore import Qt, QSize
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from scipy.interpolate import splprep, splev
-from matplotlib.colors import Normalize
 from matplotlib.patches import Polygon
 
 

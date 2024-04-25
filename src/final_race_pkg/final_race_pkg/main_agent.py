@@ -462,8 +462,8 @@ class PurePursuit(Node):
 def main(args=None):
     
     rclpy.init(args=args)
-    print("PurePursuit Initialized")
     pure_pursuit_node = PurePursuit()
+    print("PurePursuit Initialized")
     rclpy.spin(pure_pursuit_node)
 
     pure_pursuit_node.destroy_node()
