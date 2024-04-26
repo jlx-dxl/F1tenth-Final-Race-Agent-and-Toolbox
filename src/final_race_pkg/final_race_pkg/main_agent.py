@@ -16,7 +16,6 @@ from geometry_msgs.msg import Point
 from std_msgs.msg import ColorRGBA
 import matplotlib.pyplot as plt
 
-from os.path import join
 from .util import *
 
 # get the file path for this package
@@ -35,16 +34,16 @@ class PurePursuit(Node):
     """
 
     def __init__(self):
-        super().__init__('pure_pursuit_node')
+        super().__init__('main_agent')
 
         ####################################### Params ##########################################
         # self.declare_parameter('if_real', False)
-        self.declare_parameter('lookahead_distance', 2.1)
-        self.declare_parameter('lookahead_points', 18)      # to calculate yaw diff
+        self.declare_parameter('lookahead_distance', 1.2)
+        self.declare_parameter('lookahead_points', 9)      # to calculate yaw diff
         self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
-        self.declare_parameter('L_slope_atten', 0.4)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
-        self.declare_parameter('n_cluster', 5)
-        self.declare_parameter('kp', 0.55)
+        self.declare_parameter('L_slope_atten', 0.8)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
+        self.declare_parameter('n_cluster', 2)
+        self.declare_parameter('kp', 0.5)
         self.declare_parameter('ki', 0.0)
         self.declare_parameter('kd', 0.005)
         self.declare_parameter("max_control", MAX_STEER)
@@ -173,6 +172,7 @@ class PurePursuit(Node):
 ###################################################### Callbacks ############################################################
     
     def listener_callback_inner(self, msg):
+        # print("Received trajectory")
         trajectory_array = np.array(msg.data, dtype=np.float32).reshape((200, 4)).astype(float)
         self.x_list = trajectory_array[:, 0]
         self.y_list = trajectory_array[:, 1]
@@ -183,6 +183,7 @@ class PurePursuit(Node):
         self.v_min = np.min(self.v_list)
     
     def laser_scan_callback(self, data):
+        # print("Received laser scan data")
         x = self.curr_pos[0]
         y = self.curr_pos[1]
         yaw = self.curr_yaw
@@ -211,6 +212,7 @@ class PurePursuit(Node):
             self.visulaize_curr_opp(curr_opp_position)
         
     def pose_callback(self, pose_msg):
+        # print("Received pose message")
         if self.flag == True:  
             curr_x = pose_msg.pose.position.x
             curr_y = pose_msg.pose.position.y
@@ -219,74 +221,28 @@ class PurePursuit(Node):
             curr_x = pose_msg.pose.pose.position.x
             curr_y = pose_msg.pose.pose.position.y
             curr_quat = pose_msg.pose.pose.orientation
-        self.curr_pos = np.array([curr_x, curr_y])
-        self.curr_yaw = math.atan2(2 * (curr_quat.w * curr_quat.z + curr_quat.x * curr_quat.y),
+        curr_pos = np.array([curr_x, curr_y])
+        curr_yaw = math.atan2(2 * (curr_quat.w * curr_quat.z + curr_quat.x * curr_quat.y),
                               1 - 2 * (curr_quat.y ** 2 + curr_quat.z ** 2))
-
-        # find the closest current point
-        # find index of closest point
-        distances = np.linalg.norm(self.xyv_list - self.curr_pos, axis=1)
-        min_idx = np.argmin(distances)
-        closest_point = self.xyv_list[min_idx, :]
-
+        
+        self.curr_pos = curr_pos
+        self.curr_yaw = curr_yaw
+        
         # change L based on another lookahead distance for yaw difference!
         L = self.get_parameter('lookahead_distance').get_parameter_value().double_value
         lookahead_points = self.get_parameter('lookahead_points').get_parameter_value().integer_value
         lookbehind_points = self.get_parameter('lookbehind_points').get_parameter_value().integer_value
-        
-        future_yaw_target = self.yaw_list[(min_idx + lookahead_points) % self.yaw_list.shape[0]]
-        past_yaw_target = self.yaw_list[(min_idx - lookbehind_points) % self.yaw_list.shape[0]]
-        yaw_diff = abs(past_yaw_target - future_yaw_target)
-        if yaw_diff > np.pi:
-            yaw_diff = yaw_diff - 2 * np.pi
-        if yaw_diff < -np.pi:
-            yaw_diff = yaw_diff + 2 * np.pi
-        yaw_diff = abs(yaw_diff)
         slope = self.get_parameter('L_slope_atten').get_parameter_value().double_value
-        L = decrease_lookahead(L, yaw_diff, slope)
-        gamma = 2 / L ** 2  # curvature of arc
 
-        # TODO: find the current waypoint to track using methods mentioned in lecture
-        self.curr_target_idx = min_idx
-        next_idx = min_idx + 1
-        next_dist = distances[next_idx % len(distances)]
-        while (next_dist <= L):
-            min_idx = next_idx
-            next_idx = next_idx + 1
-            next_dist = distances[next_idx % distances.shape[0]]  # avoid hitting the array's end
-        # once points are found, find linear interpolation of them through binary search 
-        # until it's at the right distance L
-        close_point = self.xyv_list[min_idx % distances.shape[0], :]
-        far_point = self.xyv_list[next_idx % distances.shape[0], :]
-        dist_btwn_ends = np.linalg.norm(far_point - close_point)
-        guess_point = proj_along(close_point, far_point, dist_btwn_ends / 2)
-        dist_to_guess = np.linalg.norm(self.curr_pos - guess_point)
-        num_iters = 0
-        while (abs(dist_to_guess - L) > 0.01):
-            if (dist_to_guess > L):  # too far away, set the guess point as the far point
-                far_point = guess_point
-                dist_btwn_ends = np.linalg.norm(far_point - close_point)
-                direction = -1  # go backward
-            else:  # too close, set the guess point as the close point
-                close_point = guess_point
-                dist_btwn_ends = np.linalg.norm(far_point - close_point)
-                direction = 1  # go forward
-            # recalculate
-            guess_point = proj_along(close_point, far_point, direction * dist_btwn_ends / 2)
-            dist_to_guess = np.linalg.norm(self.curr_pos - guess_point)
-            num_iters = num_iters + 1
-        self.target_point = guess_point
-        # print(num_iters)
+        xyv_list = self.xyv_list
+        yaw_list = self.yaw_list
+        v_list = self.v_list
 
-        # TODO: transform goal point to vehicle frame of reference
-        R = np.array([[np.cos(self.curr_yaw), np.sin(self.curr_yaw)],
-                      [-np.sin(self.curr_yaw), np.cos(self.curr_yaw)]])
-        target_x, target_y = R @ np.array([self.target_point[0] - curr_x,
-                                           self.target_point[1] - curr_y])
-        target_v = self.v_list[self.curr_target_idx % len(self.v_list)]
-        # compute error using the lookahead distance
-        error = gamma * target_y
+        error, target_v, target_point, curr_target_idx = get_lookahead(curr_pos, curr_yaw, xyv_list, yaw_list, v_list, L, lookahead_points, lookbehind_points, slope)
 
+        self.target_point = target_point
+        self.curr_target_idx = curr_target_idx
+        
         # TODO: publish drive message, don't forget to limit the steering angle.
         message = AckermannDriveStamped()
         message.drive.speed = target_v

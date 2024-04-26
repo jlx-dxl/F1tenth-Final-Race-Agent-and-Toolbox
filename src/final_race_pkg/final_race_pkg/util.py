@@ -5,7 +5,11 @@ import numpy as np
 from numba import jit
 
 ########################################################## Helper Functions ########################################################
-    
+
+@jit(nopython=True)
+def euclidean_norm(data):
+    return np.sqrt(np.sum(data**2, axis=1))
+
 @jit(nopython=True)
 # travel a certain distance from one point in the direction of another
 def proj_along(start, target, dist):
@@ -24,8 +28,67 @@ def decrease_lookahead(L, yaw_diff, slope):
     if (yaw_diff > np.pi / 2):
         yaw_diff = np.pi / 2
     L = max(0.5, L * ((np.pi / 2 - yaw_diff * slope) / (np.pi / 2)))
-
     return L
+
+@jit(nopython=True)
+def get_lookahead(curr_pos, curr_yaw, xyv_list, yaw_list, v_list, L, lookahead_points, lookbehind_points, slope):
+    # find index of closest point
+    distances = euclidean_norm(xyv_list - curr_pos)
+    min_idx = np.argmin(distances)
+    
+    future_yaw_target = yaw_list[(min_idx + lookahead_points) % yaw_list.shape[0]]
+    past_yaw_target = yaw_list[(min_idx - lookbehind_points) % yaw_list.shape[0]]
+    yaw_diff = abs(past_yaw_target - future_yaw_target)
+    if yaw_diff > np.pi:
+        yaw_diff = yaw_diff - 2 * np.pi
+    if yaw_diff < -np.pi:
+        yaw_diff = yaw_diff + 2 * np.pi
+    yaw_diff = abs(yaw_diff)
+    L = decrease_lookahead(L, yaw_diff, slope)
+    gamma = 2 / L ** 2  # curvature of arc
+
+    # TODO: find the current waypoint to track using methods mentioned in lecture
+    curr_target_idx = min_idx
+    next_idx = min_idx + 1
+    next_dist = distances[next_idx % len(distances)]
+    while (next_dist <= L):
+        min_idx = next_idx
+        next_idx = next_idx + 1
+        next_dist = distances[next_idx % distances.shape[0]]  # avoid hitting the array's end
+    # once points are found, find linear interpolation of them through binary search 
+    # until it's at the right distance L
+    close_point = xyv_list[min_idx % distances.shape[0], :]
+    far_point = xyv_list[next_idx % distances.shape[0], :]
+    dist_btwn_ends = np.linalg.norm(far_point - close_point)
+    guess_point = proj_along(close_point, far_point, dist_btwn_ends / 2)
+    dist_to_guess = np.linalg.norm(curr_pos - guess_point)
+    num_iters = 0
+    while (abs(dist_to_guess - L) > 0.01):
+        if (dist_to_guess > L):  # too far away, set the guess point as the far point
+            far_point = guess_point
+            dist_btwn_ends = np.linalg.norm(far_point - close_point)
+            direction = -1  # go backward
+        else:  # too close, set the guess point as the close point
+            close_point = guess_point
+            dist_btwn_ends = np.linalg.norm(far_point - close_point)
+            direction = 1  # go forward
+        # recalculate
+        guess_point = proj_along(close_point, far_point, direction * dist_btwn_ends / 2)
+        dist_to_guess = np.linalg.norm(curr_pos - guess_point)
+        num_iters = num_iters + 1
+    target_point = guess_point
+    # print(num_iters)
+
+    # TODO: transform goal point to vehicle frame of reference
+    R = np.array([[np.cos(curr_yaw), np.sin(curr_yaw)],
+                    [-np.sin(curr_yaw), np.cos(curr_yaw)]])
+    _, target_y = R @ np.array([target_point[0] - curr_pos[0],
+                                        target_point[1] - curr_pos[1]])
+    target_v = v_list[curr_target_idx % len(v_list)]
+    # compute error using the lookahead distance
+    error = gamma * target_y
+    
+    return error, target_v, target_point, curr_target_idx
 
 def k_means(points: np.ndarray, k: int, max_iters=100):
     # 随机初始化聚类中心
@@ -73,6 +136,7 @@ def get_move_obstacle_list(ranges, angle_increment, angle_min, x, y, yaw, lb, rt
         # 转换为栅格地图的索引
         grid_x = int((global_x - lb[0]) / res)
         grid_y = int((global_y - lb[1]) / res)
+        # print(grid_x, grid_y)
         
         grid_nx = int(abs(lb[0] - rt[0]) / res)
         grid_ny = int(abs(lb[1] - rt[1]) / res)
