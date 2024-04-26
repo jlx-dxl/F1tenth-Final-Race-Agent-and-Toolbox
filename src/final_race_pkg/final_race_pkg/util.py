@@ -3,6 +3,7 @@
 import math
 import numpy as np
 from numba import jit
+from collections import deque
 
 ########################################################## Helper Functions ########################################################
 
@@ -181,3 +182,46 @@ def mark_rectangle_on_grid(grid_map, lb, rt, resolution, rect_lb, rect_rt):
     grid_map[min_y:max_y+1, min_x:max_x+1] = 1
     
     return grid_map
+
+def calculate_mean_velocity(data):
+    # 计算 x 和 y 的差值
+    differences = np.diff(data[:, :2], axis=0)  # 对 x 和 y 列做差
+    time_diff = np.diff(data[:, 2], axis=0)  # 时间差
+
+    # 计算每对点之间的欧几里得距离
+    distances = np.linalg.norm(differences, axis=1)
+
+    # 计算速度
+    velocities = distances / time_diff
+
+    # 计算平均速度
+    average_velocity = np.mean(velocities)
+    
+    return average_velocity
+
+
+class FixedQueue:
+    def __init__(self, max_length):
+        self.max_length = max_length
+        self.queue = deque(maxlen=self.max_length)
+
+    def push(self, data):
+        if not isinstance(data, np.ndarray) or data.shape != (1, 3):
+            raise ValueError("Data must be a 1x3 numpy array.")
+        self.queue.append(data)
+
+    def get_array(self):
+        # 返回一个n*3的numpy数组
+        if np.array(self.queue).ndim == 3:
+            return np.squeeze(np.array(self.queue),axis=1)
+        else:
+            return np.array(self.queue)
+    
+    def get_median(self):
+        return np.median(self.get_array(), axis=0)
+    
+    def calculate_velocity(self):
+        if len(self.queue) < 3:
+            return 0
+        else:
+            return calculate_mean_velocity(self.get_array())

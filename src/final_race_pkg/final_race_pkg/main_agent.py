@@ -43,6 +43,9 @@ class PurePursuit(Node):
         self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
         self.declare_parameter('L_slope_atten', 0.8)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
         self.declare_parameter('n_cluster', 2)
+        self.declare_parameter('queue_size_filter', 20)   # should be decided by the latency of the system
+        self.declare_parameter('queue_size', 10)   # should be decided by the latency of the system
+        
         self.declare_parameter('kp', 0.5)
         self.declare_parameter('ki', 0.0)
         self.declare_parameter('kd', 0.005)
@@ -167,6 +170,15 @@ class PurePursuit(Node):
         print("scatter_pub initialized, topic: " + '/scatter')
         self.oppo_curr_pub = self.create_publisher(Marker, '/curr_opp', 10)
         print("oppo_curr_pub initialized, topic: " + '/curr_opp')
+        
+        self.last_opp_position = (0,0)
+        
+        queue_size_filter = self.get_parameter('queue_size_filter').get_parameter_value().integer_value
+        queue_size = self.get_parameter('queue_size').get_parameter_value().integer_value
+        self.opp_queue_raw = FixedQueue(queue_size_filter)
+        self.opp_queue = FixedQueue(queue_size)   # 里面放的是滤波后的对手位置，用于进行速度估计，轨迹预测等
+        
+        self.start_time = self.get_clock().now().nanoseconds / 1e9
 
         
 ###################################################### Callbacks ############################################################
@@ -203,13 +215,26 @@ class PurePursuit(Node):
         
         k = self.get_parameter('n_cluster').get_parameter_value().integer_value
         
+        # 第一层，滤波，维护一个动态队列，取队列的中位数作为对手位置的估计，能够消除一些离群点
         if len(moving_obstacle_list) > k:
-            
             moving_obstacle_list = np.array(moving_obstacle_list, dtype=np.float64)
-            curr_opp_position = find_densest_cluster_center(moving_obstacle_list, k)
-            print(curr_opp_position)
-            
-            self.visulaize_curr_opp(curr_opp_position)
+            curr_opp_position = find_densest_cluster_center(moving_obstacle_list, k)   # raw opponent position
+            now = self.get_clock().now().nanoseconds / 1e9 - self.start_time
+            data = np.array([curr_opp_position[0], curr_opp_position[1], now]).reshape(1, 3)
+            self.opp_queue_raw.push(data)   # 维护一个队列，用于滤波
+            self.last_opp_position = curr_opp_position
+        else:
+            now = self.get_clock().now().nanoseconds / 1e9 - self.start_time
+            data = np.array([self.last_opp_position[0], self.last_opp_position[1], now]).reshape(1, 3)
+            self.opp_queue_raw.push(data)   # 如果没有检测到对手，就持续放入最后一次检测到的位置
+        
+        # 取队列的中位数作为对手位置的估计
+        median_opp_position = self.opp_queue_raw.get_median().reshape(3,)
+        self.visulaize_curr_opp((median_opp_position[0],median_opp_position[1]))
+        
+        self.opp_queue.push(median_opp_position.reshape(1, 3))
+        opp_vel = self.opp_queue.calculate_velocity()
+        print(median_opp_position, opp_vel)
         
     def pose_callback(self, pose_msg):
         # print("Received pose message")
