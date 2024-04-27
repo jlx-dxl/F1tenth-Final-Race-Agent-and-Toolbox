@@ -57,6 +57,7 @@ class PurePursuit(Node):
         self.declare_parameter("speed_coefficient", 0.1)   # how much to consider the previous speed when updating speed (larger: less consiferation)
         self.declare_parameter("dis_diff_ratio", 3.0)
         self.declare_parameter("consider_distance", 4.5)
+        self.declare_parameter("state_change_threshold", 6)   # how many continuous changes to really change the state
         
         print("finished declaring parameters")
 
@@ -194,7 +195,9 @@ class PurePursuit(Node):
         self.opp_queue = FixedQueue(queue_size)   # 里面放的是对手位置，用于进行轨迹预测
         
         self.start_time = self.get_clock().now().nanoseconds / 1e9
-        self.count = 0
+        self.count1 = 0
+        self.count2 = 0
+        self.count3 = 0
 
         
 ###################################################### Callbacks ############################################################
@@ -232,7 +235,8 @@ class PurePursuit(Node):
         k = self.get_parameter('n_cluster').get_parameter_value().integer_value
         dis_diff_ratio = self.get_parameter('dis_diff_ratio').get_parameter_value().double_value
         consider_distance = self.get_parameter('consider_distance').get_parameter_value().double_value
-        
+        state_change_threshold = self.get_parameter('state_change_threshold').get_parameter_value().integer_value
+
         # 第一层，滤波，维护一个动态队列，取队列的中位数作为对手位置的估计，能够消除一些离群点
         if len(moving_obstacle_list) > k:
             moving_obstacle_list = np.array(moving_obstacle_list, dtype=np.float64)
@@ -272,25 +276,32 @@ class PurePursuit(Node):
             if min_inner < min_outer:
                 if min_outer / min_inner > dis_diff_ratio:
                     self.flag2 = True   # True means ready to overtake
-                    self.x_list = self.waypoints_inner[:, 0]
-                    self.y_list = self.waypoints_inner[:, 1]
-                    self.v_list = self.waypoints_inner[:, 2]
-                    self.xyv_list = self.waypoints_inner[:, 0:2]   # (x,y,v)
-                    self.yaw_list = self.waypoints_inner[:, 3]
-                    self.v_max = np.max(self.v_list)
-                    self.v_min = np.min(self.v_list)
+                    self.flage3 = True   # True means to overtake from outer
+                    self.count2 += 1
+                    self.count3 += 1
                 else:
                     self.flag2 = False
-                    self.x_list = self.waypoints_best[:, 0]
-                    self.y_list = self.waypoints_best[:, 1]
-                    self.v_list = self.waypoints_best[:, 2]
-                    self.xyv_list = self.waypoints_best[:, 0:2]   # (x,y,v)
-                    self.yaw_list = self.waypoints_best[:, 3]
-                    self.v_max = np.max(self.v_list)
-                    self.v_min = np.min(self.v_list)
+                    self.count2 -= 1
             else:
                 if min_inner / min_outer > dis_diff_ratio:
                     self.flag2 = True   # True means ready to overtake
+                    self.flage3 = False   # False means to overtake from inner
+                    self.count2 += 1
+                    self.count3 -= 1
+
+                else:
+                    self.flag2 = False
+                    self.count2 -= 1
+
+                    
+            self.count1 = update_count(self.flag1, self.count1,threshold=state_change_threshold)
+            self.count2 = update_count(self.flag2, self.count2,threshold=state_change_threshold)
+            self.count3 = update_count(self.flag3, self.count3,threshold=state_change_threshold)
+            
+            if self.count2>state_change_threshold:
+                if self.count3>state_change_threshold:
+                    self.count2 += 1
+                    self.count3 += 1
                     self.x_list = self.waypoints_outer[:, 0]
                     self.y_list = self.waypoints_outer[:, 1]
                     self.v_list = self.waypoints_outer[:, 2]
@@ -299,15 +310,22 @@ class PurePursuit(Node):
                     self.v_max = np.max(self.v_list)
                     self.v_min = np.min(self.v_list)
                 else:
-                    self.flag2 = False
-                    self.x_list = self.waypoints_best[:, 0]
-                    self.y_list = self.waypoints_best[:, 1]
-                    self.v_list = self.waypoints_best[:, 2]
-                    self.xyv_list = self.waypoints_best[:, 0:2]   # (x,y,v)
-                    self.yaw_list = self.waypoints_best[:, 3]
+                    self.x_list = self.waypoints_inner[:, 0]
+                    self.y_list = self.waypoints_inner[:, 1]
+                    self.v_list = self.waypoints_inner[:, 2]
+                    self.xyv_list = self.waypoints_inner[:, 0:2]   # (x,y,v)
+                    self.yaw_list = self.waypoints_inner[:, 3]
                     self.v_max = np.max(self.v_list)
                     self.v_min = np.min(self.v_list)
-
+            else:
+                self.x_list = self.waypoints_best[:, 0]
+                self.y_list = self.waypoints_best[:, 1]
+                self.v_list = self.waypoints_best[:, 2]
+                self.xyv_list = self.waypoints_best[:, 0:2]   # (x,y,v)
+                self.yaw_list = self.waypoints_best[:, 3]
+                self.v_max = np.max(self.v_list)
+                self.v_min = np.min(self.v_list)
+                    
         
     def pose_callback(self, pose_msg):
         # print("Received pose message")
@@ -343,13 +361,14 @@ class PurePursuit(Node):
         
         speed_bias = self.get_parameter('speed_bias').get_parameter_value().double_value
         speed_coefficient = self.get_parameter('speed_coefficient').get_parameter_value().double_value
+        state_change_threshold = self.get_parameter('state_change_threshold').get_parameter_value().integer_value
 
         # TODO: publish drive message, don't forget to limit the steering angle.
         message = AckermannDriveStamped()
-        self.count = update_count(self.flag1, self.count)
+        
         curr_speed = pose_msg.twist.twist.linear.x
-        if self.count>5:
-            if self.flag2 == False:
+        if self.count1>state_change_threshold:
+            if self.count2<state_change_threshold:
                 target_speed = update_speed(curr_speed, self.opp_vel + speed_bias, coeff=speed_coefficient)
                 message.drive.speed = target_speed
                 print("Following Mode!!!")
