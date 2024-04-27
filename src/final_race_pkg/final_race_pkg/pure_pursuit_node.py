@@ -20,7 +20,7 @@ csv_loc = '/home/lucien/ESE6150/final_race/curve1.csv'
 #  Constants from xacro
 WIDTH = 0.2032  # (m)
 WHEEL_LENGTH = 0.0381  # (m)
-MAX_STEER = 0.36  # (rad)
+MAX_STEER = 0.48  # (rad)
 
 class PurePursuit(Node):
     """ 

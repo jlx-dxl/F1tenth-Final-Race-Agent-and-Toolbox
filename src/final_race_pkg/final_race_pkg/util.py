@@ -7,6 +7,20 @@ from collections import deque
 
 ########################################################## Helper Functions ########################################################
 
+def update_count(flag, count, threshold=10):
+    if flag == False:
+        count -= 1
+    else:
+        count += 1
+    if count < 0:
+        count = 0
+    if count > threshold:
+        count = threshold
+    return count
+
+def update_speed(curr_speed, target_speed, coeff=0.5):
+    return curr_speed + coeff * (target_speed - curr_speed)
+
 @jit(nopython=True)
 def euclidean_norm(data):
     return np.sqrt(np.sum(data**2, axis=1))
@@ -183,17 +197,15 @@ def mark_rectangle_on_grid(grid_map, lb, rt, resolution, rect_lb, rect_rt):
     
     return grid_map
 
+
 def calculate_mean_velocity(data):
     # 计算 x 和 y 的差值
     differences = np.diff(data[:, :2], axis=0)  # 对 x 和 y 列做差
     time_diff = np.diff(data[:, 2], axis=0)  # 时间差
-
     # 计算每对点之间的欧几里得距离
     distances = np.linalg.norm(differences, axis=1)
-
     # 计算速度
     velocities = distances / time_diff
-
     # 计算平均速度
     average_velocity = np.mean(velocities)
     

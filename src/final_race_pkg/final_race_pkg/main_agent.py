@@ -20,12 +20,12 @@ from .util import *
 
 # get the file path for this package
 # csv_loc = '/home/nvidia/f1tenth_ws/src/F1tenth-Final-Race-Agent-and-Toolbox/curve_best_sim.csv'
-csv_loc = '/home/lucien/ESE6150/final_race/curve1.csv'
+csv_loc = '/home/lucien/ESE6150/final_race/curve_best_sim.csv'
 
 #  Constants from xacro
 WIDTH = 0.2032  # (m)
 WHEEL_LENGTH = 0.0381  # (m)
-MAX_STEER = 0.36  # (rad)
+MAX_STEER = 0.48  # (rad)
 
 class PurePursuit(Node):
     """ 
@@ -38,10 +38,10 @@ class PurePursuit(Node):
 
         ####################################### Params ##########################################
         # self.declare_parameter('if_real', False)
-        self.declare_parameter('lookahead_distance', 1.2)
-        self.declare_parameter('lookahead_points', 9)      # to calculate yaw diff
+        self.declare_parameter('lookahead_distance', 1.5)
+        self.declare_parameter('lookahead_points', 12)      # to calculate yaw diff
         self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
-        self.declare_parameter('L_slope_atten', 0.8)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
+        self.declare_parameter('L_slope_atten', 0.7)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
         self.declare_parameter('n_cluster', 2)
         self.declare_parameter('queue_size_filter', 20)   # should be decided by the latency of the system
         self.declare_parameter('queue_size', 10)   # should be decided by the latency of the system
@@ -51,6 +51,8 @@ class PurePursuit(Node):
         self.declare_parameter('kd', 0.005)
         self.declare_parameter("max_control", MAX_STEER)
         self.declare_parameter("steer_alpha", 1.0)
+        self.declare_parameter("speed_bias", -0.5)   # speed bias for following mode
+        self.declare_parameter("speed_coefficient", 0.1)   # how much to consider the previous speed when updating speed (larger: less consiferation)
         
         print("finished declaring parameters")
 
@@ -171,14 +173,17 @@ class PurePursuit(Node):
         self.oppo_curr_pub = self.create_publisher(Marker, '/curr_opp', 10)
         print("oppo_curr_pub initialized, topic: " + '/curr_opp')
         
-        self.last_opp_position = (0,0)
+        self.last_opp_position = np.array([0,0])
+        self.flag1 = False
         
         queue_size_filter = self.get_parameter('queue_size_filter').get_parameter_value().integer_value
         queue_size = self.get_parameter('queue_size').get_parameter_value().integer_value
         self.opp_queue_raw = FixedQueue(queue_size_filter)
-        self.opp_queue = FixedQueue(queue_size)   # 里面放的是滤波后的对手位置，用于进行速度估计，轨迹预测等
+        self.opp_queue_speed = FixedQueue(queue_size_filter)   # 里面放的是滤波后的对手位置，用于进行速度估计，轨迹预测等
+        self.opp_queue = FixedQueue(queue_size)   # 里面放的是对手位置，用于进行轨迹预测
         
         self.start_time = self.get_clock().now().nanoseconds / 1e9
+        self.count = 0
 
         
 ###################################################### Callbacks ############################################################
@@ -222,7 +227,7 @@ class PurePursuit(Node):
             now = self.get_clock().now().nanoseconds / 1e9 - self.start_time
             data = np.array([curr_opp_position[0], curr_opp_position[1], now]).reshape(1, 3)
             self.opp_queue_raw.push(data)   # 维护一个队列，用于滤波
-            self.last_opp_position = curr_opp_position
+            self.last_opp_position = curr_opp_position[0:2]
         else:
             now = self.get_clock().now().nanoseconds / 1e9 - self.start_time
             data = np.array([self.last_opp_position[0], self.last_opp_position[1], now]).reshape(1, 3)
@@ -230,11 +235,25 @@ class PurePursuit(Node):
         
         # 取队列的中位数作为对手位置的估计
         median_opp_position = self.opp_queue_raw.get_median().reshape(3,)
-        self.visulaize_curr_opp((median_opp_position[0],median_opp_position[1]))
+        self.opp_queue_speed.push(median_opp_position.reshape(1, 3))
+        opp_vel = self.opp_queue_speed.calculate_velocity()
+        self.opp_vel = opp_vel
         
-        self.opp_queue.push(median_opp_position.reshape(1, 3))
-        opp_vel = self.opp_queue.calculate_velocity()
-        print(median_opp_position, opp_vel)
+        # 利用速度，滤掉离群检测，self.opp_queue储存的是滤波后的对手位置估计（其中仍包含一些误检测，
+        # 这些误检测的特点是在一段连续的检测中，坐标是大致不变的）
+        if opp_vel < 7.5 and opp_vel > 0.1:
+            self.opp_queue.push(median_opp_position.reshape(1, 3))
+            median_opp_position_ = self.opp_queue.get_median().reshape(3,)
+            # print(median_opp_position_, opp_vel, self.flag1)
+            self.visulaize_curr_opp((median_opp_position_[0],median_opp_position_[1]))
+            opp_position_diff = np.linalg.norm(median_opp_position_[0:2]-self.last_opp_position)
+            if opp_position_diff > 0.5 and opp_position_diff < 5.0:
+                self.flag1 = True
+            else:
+                self.flag1 = False
+            self.last_opp_position = median_opp_position_[0:2]
+            
+
         
     def pose_callback(self, pose_msg):
         # print("Received pose message")
@@ -268,10 +287,24 @@ class PurePursuit(Node):
         self.target_point = target_point
         self.curr_target_idx = curr_target_idx
         
+        speed_bias = self.get_parameter('speed_bias').get_parameter_value().double_value
+        speed_coefficient = self.get_parameter('speed_coefficient').get_parameter_value().double_value
+
         # TODO: publish drive message, don't forget to limit the steering angle.
         message = AckermannDriveStamped()
-        message.drive.speed = target_v
+        self.count = update_count(self.flag1, self.count)
+        curr_speed = pose_msg.twist.twist.linear.x
+        print(curr_speed)
+        if self.count>5:
+            target_speed = update_speed(curr_speed, self.opp_vel + speed_bias, coeff=speed_coefficient)
+            message.drive.speed = target_speed
+            # print(self.count, "Following Mode!!!")
+        else:
+            target_speed = update_speed(curr_speed, target_v, coeff=speed_coefficient)
+            message.drive.speed = target_v 
+            # print(self.count, "Free Mode!!!")
         message.drive.steering_angle = self.get_steer(error)
+        
         # self.get_logger().info('speed: %f, steer: %f' % (target_v, self.get_steer(error)))
         self.drive_pub_.publish(message)
 
@@ -405,10 +438,16 @@ class PurePursuit(Node):
         marker.scale.y = 0.2
         
         # 设置颜色
-        marker.color.a = 1.0  # 不透明度
-        marker.color.r = 1.0  # 红色
-        marker.color.g = 0.0  # 绿色
-        marker.color.b = 1.0  # 蓝色
+        if self.flag1 == True:
+            marker.color.a = 1.0  # 不透明度
+            marker.color.r = 1.0  # 红色
+            marker.color.g = 0.0  # 绿色
+            marker.color.b = 0.0  # 蓝色
+        else:
+            marker.color.a = 1.0  # 不透明度
+            marker.color.r = 0.0  # 红色
+            marker.color.g = 1.0  # 绿色
+            marker.color.b = 0.0  # 蓝色
         
 
         p = Point()
