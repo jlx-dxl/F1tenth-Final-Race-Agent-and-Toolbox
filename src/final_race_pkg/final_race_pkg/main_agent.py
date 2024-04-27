@@ -20,7 +20,9 @@ from .util import *
 
 # get the file path for this package
 # csv_loc = '/home/nvidia/f1tenth_ws/src/F1tenth-Final-Race-Agent-and-Toolbox/curve_best_sim.csv'
-csv_loc = '/home/lucien/ESE6150/final_race/curve_best_sim.csv'
+csv_loc_best = '/home/lucien/ESE6150/final_race/curve_best_sim.csv'
+csv_loc_inner = '/home/lucien/ESE6150/final_race/curve_inner_sim.csv'
+csv_loc_outer = '/home/lucien/ESE6150/final_race/curve_outer_sim.csv'
 
 #  Constants from xacro
 WIDTH = 0.2032  # (m)
@@ -42,7 +44,7 @@ class PurePursuit(Node):
         self.declare_parameter('lookahead_points', 12)      # to calculate yaw diff
         self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
         self.declare_parameter('L_slope_atten', 0.7)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
-        self.declare_parameter('n_cluster', 2)
+        self.declare_parameter('n_cluster', 4)
         self.declare_parameter('queue_size_filter', 20)   # should be decided by the latency of the system
         self.declare_parameter('queue_size', 10)   # should be decided by the latency of the system
         
@@ -51,8 +53,10 @@ class PurePursuit(Node):
         self.declare_parameter('kd', 0.005)
         self.declare_parameter("max_control", MAX_STEER)
         self.declare_parameter("steer_alpha", 1.0)
-        self.declare_parameter("speed_bias", -0.5)   # speed bias for following mode
+        self.declare_parameter("speed_bias", -1.0)   # speed bias for following mode
         self.declare_parameter("speed_coefficient", 0.1)   # how much to consider the previous speed when updating speed (larger: less consiferation)
+        self.declare_parameter("dis_diff_ratio", 3.0)
+        self.declare_parameter("consider_distance", 4.5)
         
         print("finished declaring parameters")
 
@@ -69,15 +73,20 @@ class PurePursuit(Node):
         print("if real world test? ", self.flag)
 
         # TODO: Get target x and y from pre-calculated waypoints
-        waypoints = np.loadtxt(csv_loc, delimiter=',',skiprows=1)
-        self.x_list = waypoints[:, 0]
-        self.y_list = waypoints[:, 1]
-        self.v_list = waypoints[:, 2]
-        self.xyv_list = waypoints[:, 0:2]   # (x,y,v)
-        self.yaw_list = waypoints[:, 3]
+        self.waypoints_best = np.loadtxt(csv_loc_best, delimiter=',',skiprows=1)
+        self.x_list = self.waypoints_best[:, 0]
+        self.y_list = self.waypoints_best[:, 1]
+        self.v_list = self.waypoints_best[:, 2]
+        self.xyv_list = self.waypoints_best[:, 0:2]   # (x,y,v)
+        self.yaw_list = self.waypoints_best[:, 3]
         self.v_max = np.max(self.v_list)
         self.v_min = np.min(self.v_list)
         
+        self.waypoints_inner = np.loadtxt(csv_loc_inner, delimiter=',',skiprows=1)
+        self.inner_xyv_list = self.waypoints_inner[:, 0:2]   # (x,y,v)
+        self.waypoints_outer = np.loadtxt(csv_loc_outer, delimiter=',',skiprows=1)
+        self.outer_xyv_list = self.waypoints_outer[:, 0:2]   # (x,y,v)
+
         print("finished loading waypoints")
         
         #################################### initialize grid map ################################
@@ -175,6 +184,8 @@ class PurePursuit(Node):
         
         self.last_opp_position = np.array([0,0])
         self.flag1 = False
+        self.flag2 = True
+        self.flag3 = False
         
         queue_size_filter = self.get_parameter('queue_size_filter').get_parameter_value().integer_value
         queue_size = self.get_parameter('queue_size').get_parameter_value().integer_value
@@ -205,13 +216,13 @@ class PurePursuit(Node):
         y = self.curr_pos[1]
         yaw = self.curr_yaw
         
-        ranges = data.ranges
+        ranges = data.ranges[180:900]
         angle_increment = data.angle_increment
-        angle_min = data.angle_min
+        angle_min = data.angle_min + 180 * angle_increment
         
         lb = self.lb
         rt = self.rt
-        res = self.resolution
+        res = self.resolution 
         grid_map = self.grid_map
         
         moving_obstacle_list = get_move_obstacle_list(ranges, angle_increment, angle_min, x, y, yaw, lb, rt, res, grid_map)
@@ -219,6 +230,8 @@ class PurePursuit(Node):
         self.visulaize_scatter(moving_obstacle_list)
         
         k = self.get_parameter('n_cluster').get_parameter_value().integer_value
+        dis_diff_ratio = self.get_parameter('dis_diff_ratio').get_parameter_value().double_value
+        consider_distance = self.get_parameter('consider_distance').get_parameter_value().double_value
         
         # 第一层，滤波，维护一个动态队列，取队列的中位数作为对手位置的估计，能够消除一些离群点
         if len(moving_obstacle_list) > k:
@@ -244,15 +257,56 @@ class PurePursuit(Node):
         if opp_vel < 7.5 and opp_vel > 0.1:
             self.opp_queue.push(median_opp_position.reshape(1, 3))
             median_opp_position_ = self.opp_queue.get_median().reshape(3,)
-            # print(median_opp_position_, opp_vel, self.flag1)
             self.visulaize_curr_opp((median_opp_position_[0],median_opp_position_[1]))
+            # print(median_opp_position_, opp_vel, self.flag1)
             opp_position_diff = np.linalg.norm(median_opp_position_[0:2]-self.last_opp_position)
-            if opp_position_diff > 0.5 and opp_position_diff < 5.0:
-                self.flag1 = True
+            if opp_position_diff > 0.5 and opp_position_diff < 5.0 and np.linalg.norm(median_opp_position_[0:2]-self.curr_pos) < consider_distance:
+                self.flag1 = True   # True means opponent is ahead
             else:
                 self.flag1 = False
-            self.last_opp_position = median_opp_position_[0:2]
+            self.last_opp_position = median_opp_position_[0:2] 
             
+            min_inner = np.min(np.linalg.norm(self.inner_xyv_list - self.curr_pos, axis=1))
+            min_outer = np.min(np.linalg.norm(self.outer_xyv_list - self.curr_pos, axis=1))
+            
+            if min_inner < min_outer:
+                if min_outer / min_inner > dis_diff_ratio:
+                    self.flag2 = True   # True means ready to overtake
+                    self.x_list = self.waypoints_inner[:, 0]
+                    self.y_list = self.waypoints_inner[:, 1]
+                    self.v_list = self.waypoints_inner[:, 2]
+                    self.xyv_list = self.waypoints_inner[:, 0:2]   # (x,y,v)
+                    self.yaw_list = self.waypoints_inner[:, 3]
+                    self.v_max = np.max(self.v_list)
+                    self.v_min = np.min(self.v_list)
+                else:
+                    self.flag2 = False
+                    self.x_list = self.waypoints_best[:, 0]
+                    self.y_list = self.waypoints_best[:, 1]
+                    self.v_list = self.waypoints_best[:, 2]
+                    self.xyv_list = self.waypoints_best[:, 0:2]   # (x,y,v)
+                    self.yaw_list = self.waypoints_best[:, 3]
+                    self.v_max = np.max(self.v_list)
+                    self.v_min = np.min(self.v_list)
+            else:
+                if min_inner / min_outer > dis_diff_ratio:
+                    self.flag2 = True   # True means ready to overtake
+                    self.x_list = self.waypoints_outer[:, 0]
+                    self.y_list = self.waypoints_outer[:, 1]
+                    self.v_list = self.waypoints_outer[:, 2]
+                    self.xyv_list = self.waypoints_outer[:, 0:2]   # (x,y,v)
+                    self.yaw_list = self.waypoints_outer[:, 3]
+                    self.v_max = np.max(self.v_list)
+                    self.v_min = np.min(self.v_list)
+                else:
+                    self.flag2 = False
+                    self.x_list = self.waypoints_best[:, 0]
+                    self.y_list = self.waypoints_best[:, 1]
+                    self.v_list = self.waypoints_best[:, 2]
+                    self.xyv_list = self.waypoints_best[:, 0:2]   # (x,y,v)
+                    self.yaw_list = self.waypoints_best[:, 3]
+                    self.v_max = np.max(self.v_list)
+                    self.v_min = np.min(self.v_list)
 
         
     def pose_callback(self, pose_msg):
@@ -294,15 +348,19 @@ class PurePursuit(Node):
         message = AckermannDriveStamped()
         self.count = update_count(self.flag1, self.count)
         curr_speed = pose_msg.twist.twist.linear.x
-        print(curr_speed)
         if self.count>5:
-            target_speed = update_speed(curr_speed, self.opp_vel + speed_bias, coeff=speed_coefficient)
-            message.drive.speed = target_speed
-            # print(self.count, "Following Mode!!!")
+            if self.flag2 == False:
+                target_speed = update_speed(curr_speed, self.opp_vel + speed_bias, coeff=speed_coefficient)
+                message.drive.speed = target_speed
+                print("Following Mode!!!")
+            else:
+                target_speed = update_speed(curr_speed, target_v, coeff=speed_coefficient)
+                message.drive.speed = target_v 
+                print("Overtaking Mode!!!")
         else:
             target_speed = update_speed(curr_speed, target_v, coeff=speed_coefficient)
             message.drive.speed = target_v 
-            # print(self.count, "Free Mode!!!")
+            print("Free Mode!!!")
         message.drive.steering_angle = self.get_steer(error)
         
         # self.get_logger().info('speed: %f, steer: %f' % (target_v, self.get_steer(error)))
@@ -434,8 +492,8 @@ class PurePursuit(Node):
         marker.action = Marker.ADD
         
         # 设置Marker的尺寸
-        marker.scale.x = 0.2  # 点的大小
-        marker.scale.y = 0.2
+        marker.scale.x = 0.5  # 点的大小
+        marker.scale.y = 0.5
         
         # 设置颜色
         if self.flag1 == True:

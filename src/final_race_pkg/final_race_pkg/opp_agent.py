@@ -35,8 +35,8 @@ class PurePursuit(Node):
 
         # Params
         # self.declare_parameter('if_real', False)
-        self.declare_parameter('lookahead_distance', 1.2)
-        self.declare_parameter('lookahead_points', 6)      # to calculate yaw diff
+        self.declare_parameter('lookahead_distance', 1.5)
+        self.declare_parameter('lookahead_points', 9)      # to calculate yaw diff
         self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
         self.declare_parameter('L_slope_atten', 0.6)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
 

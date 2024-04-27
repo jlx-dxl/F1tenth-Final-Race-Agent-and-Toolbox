@@ -211,6 +211,47 @@ def calculate_mean_velocity(data):
     
     return average_velocity
 
+def fit_curve(data, order=1):
+    """
+    Fit x and y as functions of t using polynomial regression.
+    
+    Parameters:
+        data (np.ndarray): Input data of shape (20, 3), where columns are x, y, t.
+        order (int): Polynomial order for the fitting.
+        
+    Returns:
+        tuple: Tuple containing:
+            - coeffs_x (np.ndarray): Coefficients for the polynomial fit of x(t).
+            - coeffs_y (np.ndarray): Coefficients for the polynomial fit of y(t).
+    """
+    # Extract columns
+    t = data[:, 2]
+    x = data[:, 0]
+    y = data[:, 1]
+    
+    # Fit x and y as functions of t
+    coeffs_x = np.polyfit(t, x, order)
+    coeffs_y = np.polyfit(t, y, order)
+    
+    return coeffs_x, coeffs_y
+
+def predict_xy(coeffs_x, coeffs_y, t):
+    """
+    Predict x and y values for a given t using polynomial coefficients.
+    
+    Parameters:
+        coeffs_x (np.ndarray): Coefficients for x(t) polynomial.
+        coeffs_y (np.ndarray): Coefficients for y(t) polynomial.
+        t (float): Time at which to predict x and y.
+        
+    Returns:
+        tuple: Predicted x and y values at time t.
+    """
+    x_pred = np.polyval(coeffs_x, t)
+    y_pred = np.polyval(coeffs_y, t)
+    
+    return x_pred, y_pred
+
 
 class FixedQueue:
     def __init__(self, max_length):
@@ -232,8 +273,15 @@ class FixedQueue:
     def get_median(self):
         return np.median(self.get_array(), axis=0)
     
+    def get_mean(self):
+        return np.mean(self.get_array(), axis=0)
+    
     def calculate_velocity(self):
         if len(self.queue) < 3:
             return 0
         else:
             return calculate_mean_velocity(self.get_array())
+        
+    def estimate_future(self, t):
+        coeffs_x, coeffs_y = fit_curve(self.get_array())
+        return predict_xy(coeffs_x, coeffs_y, t)
