@@ -371,18 +371,18 @@ class PurePursuit(Node):
             if self.count2<state_change_threshold:
                 target_speed = update_speed(curr_speed, self.opp_vel + speed_bias, coeff=speed_coefficient)
                 message.drive.speed = target_speed
-                print("Following Mode!!!")
+                # print("Following Mode!!!")
             else:
                 target_speed = update_speed(curr_speed, target_v, coeff=speed_coefficient)
                 message.drive.speed = target_v 
-                print("Overtaking Mode!!!")
+                # print("Overtaking Mode!!!")
         else:
             target_speed = update_speed(curr_speed, target_v, coeff=speed_coefficient)
             message.drive.speed = target_v 
-            print("Free Mode!!!")
+            # print("Free Mode!!!")
         message.drive.steering_angle = self.get_steer(error)
         
-        # self.get_logger().info('speed: %f, steer: %f' % (target_v, self.get_steer(error)))
+        self.get_logger().info('count1: %f, count2: %f, count3: %f' % (self.count1, self.count2, self.count3))
         self.drive_pub_.publish(message)
 
         # remember to visualize the waypoints
