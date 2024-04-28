@@ -36,13 +36,19 @@ class PurePursuit(Node):
         self.declare_parameter('lookahead_distance', 1.5)
         self.declare_parameter('lookahead_points', 12)      # to calculate yaw diff
         self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
-        self.declare_parameter('L_slope_atten', 0.8)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
+        self.declare_parameter('L_slope_atten', 0.6)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
 
         self.declare_parameter('kp', 0.6)
         self.declare_parameter('ki', 0.0)
         self.declare_parameter('kd', 0.005)
         self.declare_parameter("max_control", MAX_STEER)
         self.declare_parameter("steer_alpha", 1.0)
+        
+        self.declare_parameter('ittc_threshold_low', 0.5)
+        self.declare_parameter('speed_threshold_1', 4.0)
+        self.declare_parameter('ittc_threshold_medium', 0.9)
+        self.declare_parameter('speed_threshold_2', 2.0)
+        self.declare_parameter('ittc_threshold_high', 1.5)
 
         print("finished declaring parameters")
         # PID Control Params
@@ -50,7 +56,7 @@ class PurePursuit(Node):
         self.integral = 0.0
         self.prev_steer = 0.0
         
-        self.flag = False
+        self.flag = True
         print("if real world test? ", self.flag)
 
         # TODO: Get target x and y from pre-calculated waypoints
@@ -70,6 +76,10 @@ class PurePursuit(Node):
             odom_topic = '/pf/viz/inferred_pose'
             self.odom_sub_ = self.create_subscription(PoseStamped, odom_topic, self.pose_callback, 10)
             print(odom_topic + " initialized")
+            
+            odom_topic_speed = '/ego_racecar/odom'
+            self.odom_sub_speed = self.create_subscription(Odometry, odom_topic, self.speed_callback, 10)
+            print(odom_topic_speed + " initialized")
         else:
             odom_topic = '/ego_racecar/odom'
             self.odom_sub_ = self.create_subscription(Odometry, odom_topic, self.pose_callback, 10)
@@ -77,16 +87,60 @@ class PurePursuit(Node):
         drive_topic = '/drive'
         waypoint_topic = '/waypoint'
         waypoint_path_topic = '/waypoint_path'
+        scan_topic = '/scan'
 
         self.traj_published = False
         self.drive_pub_ = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
         print("drive_pub_ initialized, topic: " + drive_topic)
+        self.scan_sub_ = self.create_subscription(LaserScan, '/scan', self.scan_callback, 10)
+        print("scan_sub_ initialized, topic: " + scan_topic)
         self.waypoint_pub_ = self.create_publisher(Marker, waypoint_topic, 10)
         print("waypoint_pub_ initialized, topic: " + waypoint_topic)
         self.waypoint_path_pub_ = self.create_publisher(Marker, waypoint_path_topic, 10)
         print("waypoint_path_pub_ initialized, topic: " + waypoint_path_topic)
         
 ########################################### Callback ############################################
+
+    def scan_callback(self, scan_msg: LaserScan):
+            
+        n_ranges = len(scan_msg.ranges)   # 1080
+        ranges = np.array(scan_msg.ranges)   # range datas
+        cared_ranges = ranges[int(n_ranges*8/18):int(n_ranges*10/18)]   # (-15~15)
+        cared_ranges = np.where(((cared_ranges >= scan_msg.range_min) & (cared_ranges <= scan_msg.range_max)), cared_ranges, np.inf)
+        
+        angles = np.arange(n_ranges) * scan_msg.angle_increment + scan_msg.angle_min
+        cared_angles = angles[int(n_ranges*8/18):int(n_ranges*10/18)]   # (-15~15)
+        
+        vels = self.speed * np.cos(cared_angles)
+        vels = np.where(vels > 1e-8, vels, 1e-8)
+        
+        ittc = min(cared_ranges / vels)
+        self.get_logger().info("ITTC:%f; Current Speed:%f" % (ittc, self.speed))
+        
+        # if ittc < self.adaptive_ittc_threshold:
+        #     message = AckermannDriveStamped()
+        #     message.drive.speed = 0.0
+        #     self.publisher_.publish(message)
+
+    def speed_callback(self, speed_msg):
+        self.speed = speed_msg.twist.twist.linear.x
+        
+        speed_threshold_1 = self.get_parameter('speed_threshold_1').get_parameter_value().double_value
+        speed_threshold_2 = self.get_parameter('speed_threshold_2').get_parameter_value().double_value
+        
+        ittc_threshold_low = self.get_parameter('ittc_threshold_low').get_parameter_value().double_value
+        ittc_threshold_medium = self.get_parameter('ittc_threshold_medium').get_parameter_value().double_value
+        ittc_threshold_high = self.get_parameter('ittc_threshold_high').get_parameter_value().double_value
+        
+        # low speed:
+        if self.speed < speed_threshold_2:
+            self.adaptive_ittc_threshold = ittc_threshold_low
+        # medium speed
+        elif (self.speed >= speed_threshold_2) & (self.speed < speed_threshold_1):
+            self.adaptive_ittc_threshold = ittc_threshold_medium
+        # high speed
+        else:
+            self.adaptive_ittc_threshold = ittc_threshold_high
         
     def pose_callback(self, pose_msg):
         if self.flag == True:  
