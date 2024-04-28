@@ -78,7 +78,7 @@ def get_lookahead(curr_pos, curr_yaw, xyv_list, yaw_list, v_list, L, lookahead_p
     guess_point = proj_along(close_point, far_point, dist_btwn_ends / 2)
     dist_to_guess = np.linalg.norm(curr_pos - guess_point)
     num_iters = 0
-    while (abs(dist_to_guess - L) > 0.01):
+    while ((abs(dist_to_guess - L) > 0.01) and num_iters<10000):
         if (dist_to_guess > L):  # too far away, set the guess point as the far point
             far_point = guess_point
             dist_btwn_ends = np.linalg.norm(far_point - close_point)

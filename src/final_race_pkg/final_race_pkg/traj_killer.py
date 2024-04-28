@@ -369,8 +369,8 @@ class CurvePlotterNode(Node, QMainWindow):
             self.colorbars.append(colorbar)  # Keep track of colorbars
             
         # Define polygons' vertices
-        vertices1 = [(9.4, 7.3), (21.0, 7.7), (21.0, 21.0), (15.0, 21.0), (15.3, 14.1), (9.3, 14.1)]
-        vertices2 = [(12.8, 9.6), (18.8, 9.8), (18.5, 16.8), (17.8, 16.8), (18.0, 10.6), (12.7, 10.5)]
+        vertices1 = [(-3.8, -1.5), (8.1, -1.1), (7.8, 13.5), (2.0, 13.3), (1.95, 5.87), (-4.1, 5.8)]
+        vertices2 = [(-0.4, 1.3), (5.36, 1.51), (5.29, 8.55), (4.78, 8.53), (4.86, 2.14), (-0.42, 1.96)]
 
         # Create Polygon objects
         polygon1 = Polygon(vertices1, closed=True, edgecolor='black', fill=None, linewidth=3.0)

@@ -19,11 +19,10 @@ import matplotlib.pyplot as plt
 from .util import *
 
 # get the file path for this package
-# csv_loc = '/home/nvidia/f1tenth_ws/src/F1tenth-Final-Race-Agent-and-Toolbox/curve_best_sim.csv'
-csv_loc_best = '/home/lucien/ESE6150/final_race/curve_best_sim.csv'
-csv_loc_inner = '/home/lucien/ESE6150/final_race/curve_inner_sim.csv'
-csv_loc_outer = '/home/lucien/ESE6150/final_race/curve_outer_sim.csv'
-
+# csv_loc = '/home/nvidia/f1tenth_ws/src/F1tenth-Final-Race-Agent-and-Toolbox/curve1.csv'
+csv_loc_best = '/home/nvidia/f1tenth_ws/curve1.csv'
+csv_loc_inner = '/home/nvidia/f1tenth_ws/curve_inner_sim.csv'
+csv_loc_outer = '/home/nvidia/f1tenth_ws/curve_outer_sim.csv'
 #  Constants from xacro
 WIDTH = 0.2032  # (m)
 WHEEL_LENGTH = 0.0381  # (m)
@@ -70,7 +69,7 @@ class PurePursuit(Node):
         self.curr_yaw = 0.0
         
         #self.flag = self.get_parameter('lookahead_distance').get_parameter_value().bool_value
-        self.flag = False
+        self.flag = True
         print("if real world test? ", self.flag)
 
         # TODO: Get target x and y from pre-calculated waypoints
@@ -154,6 +153,11 @@ class PurePursuit(Node):
             odom_topic = '/pf/viz/inferred_pose'
             self.odom_sub_ = self.create_subscription(PoseStamped, odom_topic, self.pose_callback, 10)
             print(odom_topic + " initialized")
+            
+            odom_topic_speed = '/ego_racecar/odom'
+            self.odom_sub_speed = self.create_subscription(Odometry, odom_topic_speed, self.speed_callback, 10)
+            print(odom_topic_speed + " initialized")
+            
         else:
             odom_topic = '/ego_racecar/odom'
             self.odom_sub_ = self.create_subscription(Odometry, odom_topic, self.pose_callback, 10)
@@ -198,6 +202,7 @@ class PurePursuit(Node):
         self.count2 = 0
         self.count3 = 0
 
+        self.curr_speed = 0.0
         
 ###################################################### Callbacks ############################################################
     
@@ -211,6 +216,9 @@ class PurePursuit(Node):
         self.yaw_list = trajectory_array[:, 3]
         self.v_max = np.max(self.v_list)
         self.v_min = np.min(self.v_list)
+        
+    def speed_callback(self, msg):
+    	self.curr_speed = pose_msg.twist.twist.linear.x
     
     def laser_scan_callback(self, data):
         # print("Received laser scan data")
@@ -373,19 +381,18 @@ class PurePursuit(Node):
 
         # TODO: publish drive message, don't forget to limit the steering angle.
         message = AckermannDriveStamped()
-        
-        curr_speed = pose_msg.twist.twist.linear.x
+            
         if self.count1>state_change_threshold:
             if self.count2<state_change_threshold:
-                target_speed = update_speed(curr_speed, self.opp_vel + speed_bias, coeff=speed_coefficient)
+                target_speed = update_speed(self.curr_speed, self.opp_vel + speed_bias, coeff=speed_coefficient)
                 message.drive.speed = target_speed
                 print("Following Mode!!!")
             else:
-                target_speed = update_speed(curr_speed, target_v, coeff=speed_coefficient)
+                target_speed = update_speed(self.curr_speed, target_v, coeff=speed_coefficient)
                 message.drive.speed = target_v 
                 print("Overtaking Mode!!!")
         else:
-            target_speed = update_speed(curr_speed, target_v, coeff=speed_coefficient)
+            target_speed = update_speed(self.curr_speed, target_v, coeff=speed_coefficient)
             message.drive.speed = target_v 
             print("Free Mode!!!")
         message.drive.steering_angle = self.get_steer(error)
