@@ -259,8 +259,8 @@ class FixedQueue:
         self.queue = deque(maxlen=self.max_length)
 
     def push(self, data):
-        if not isinstance(data, np.ndarray) or data.shape != (1, 3):
-            raise ValueError("Data must be a 1x3 numpy array.")
+        # if not isinstance(data, np.ndarray):
+        #    raise ValueError("Data must be a 1x3 numpy array.")
         self.queue.append(data)
 
     def get_array(self):

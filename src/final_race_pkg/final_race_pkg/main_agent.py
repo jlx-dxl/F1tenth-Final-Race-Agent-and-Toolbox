@@ -52,11 +52,11 @@ class PurePursuit(Node):
         self.declare_parameter('kd', 0.005)
         self.declare_parameter("max_control", MAX_STEER)
         self.declare_parameter("steer_alpha", 1.0)
-        self.declare_parameter("speed_bias", -2.0)   # speed bias for following mode
+        self.declare_parameter("speed_bias", -1.0)   # speed bias for following mode
         self.declare_parameter("speed_coefficient", 0.1)   # how much to consider the previous speed when updating speed (larger: less consiferation)
-        self.declare_parameter("dis_diff_ratio", 4.0)
-        self.declare_parameter("consider_distance", 5.0)
-        self.declare_parameter("state_change_threshold", 10)   # how many continuous changes to really change the state
+        self.declare_parameter("dis_diff_ratio", 3.0)
+        self.declare_parameter("consider_distance", 4.5)
+        self.declare_parameter("state_change_threshold", 6)   # how many continuous changes to really change the state
         
         print("finished declaring parameters")
 
@@ -134,6 +134,7 @@ class PurePursuit(Node):
         mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (15.0, 19.0), (21.0, 21.0))   # 顶部
         mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (9.8, 7.3), (20.0, 7.7))   # 底部
         mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (20.8, 7.5), (21.0, 21.0))   # 底部
+
 
         # # 使用matplotlib可视化地图
         # plt.figure(figsize=(10, 10))
@@ -301,36 +302,27 @@ class PurePursuit(Node):
                     self.count2 -= 1
 
                     
-            self.count1 = update_count(self.flag1, self.count1,threshold=2*state_change_threshold)
-            self.count2 = update_count(self.flag2, self.count2,threshold=2*state_change_threshold)
-            self.count3 = update_count(self.flag3, self.count3,threshold=2*state_change_threshold)
+            self.count1 = update_count(self.flag1, self.count1,threshold=state_change_threshold)
+            self.count2 = update_count(self.flag2, self.count2,threshold=state_change_threshold)
+            self.count3 = update_count(self.flag3, self.count3,threshold=state_change_threshold)
             
-            if self.count1>state_change_threshold:
-                if self.count2>state_change_threshold:
-                    if self.count3>state_change_threshold:
-                        self.count2 += 1
-                        self.count3 += 1
-                        self.x_list = self.waypoints_outer[:, 0]
-                        self.y_list = self.waypoints_outer[:, 1]
-                        self.v_list = self.waypoints_outer[:, 2]
-                        self.xyv_list = self.waypoints_outer[:, 0:2]   # (x,y,v)
-                        self.yaw_list = self.waypoints_outer[:, 3]
-                        self.v_max = np.max(self.v_list)
-                        self.v_min = np.min(self.v_list)
-                    else:
-                        self.x_list = self.waypoints_inner[:, 0]
-                        self.y_list = self.waypoints_inner[:, 1]
-                        self.v_list = self.waypoints_inner[:, 2]
-                        self.xyv_list = self.waypoints_inner[:, 0:2]   # (x,y,v)
-                        self.yaw_list = self.waypoints_inner[:, 3]
-                        self.v_max = np.max(self.v_list)
-                        self.v_min = np.min(self.v_list)
+            if self.count2>state_change_threshold:
+                if self.count3>state_change_threshold:
+                    self.count2 += 1
+                    self.count3 += 1
+                    self.x_list = self.waypoints_outer[:, 0]
+                    self.y_list = self.waypoints_outer[:, 1]
+                    self.v_list = self.waypoints_outer[:, 2]
+                    self.xyv_list = self.waypoints_outer[:, 0:2]   # (x,y,v)
+                    self.yaw_list = self.waypoints_outer[:, 3]
+                    self.v_max = np.max(self.v_list)
+                    self.v_min = np.min(self.v_list)
                 else:
-                    self.x_list = self.waypoints_best[:, 0]
-                    self.y_list = self.waypoints_best[:, 1]
-                    self.v_list = self.waypoints_best[:, 2]
-                    self.xyv_list = self.waypoints_best[:, 0:2]   # (x,y,v)
-                    self.yaw_list = self.waypoints_best[:, 3]
+                    self.x_list = self.waypoints_inner[:, 0]
+                    self.y_list = self.waypoints_inner[:, 1]
+                    self.v_list = self.waypoints_inner[:, 2]
+                    self.xyv_list = self.waypoints_inner[:, 0:2]   # (x,y,v)
+                    self.yaw_list = self.waypoints_inner[:, 3]
                     self.v_max = np.max(self.v_list)
                     self.v_min = np.min(self.v_list)
             else:
@@ -386,18 +378,18 @@ class PurePursuit(Node):
             if self.count2<state_change_threshold:
                 target_speed = update_speed(self.curr_speed, self.opp_vel + speed_bias, coeff=speed_coefficient)
                 message.drive.speed = target_speed
-                print("Following Mode!!!")
+                # print("Following Mode!!!")
             else:
                 target_speed = update_speed(self.curr_speed, target_v, coeff=speed_coefficient)
                 message.drive.speed = target_v 
-                print("Overtaking Mode!!!")
+                # print("Overtaking Mode!!!")
         else:
             target_speed = update_speed(self.curr_speed, target_v, coeff=speed_coefficient)
             message.drive.speed = target_v 
-            print("Free Mode!!!")
+            # print("Free Mode!!!")
         message.drive.steering_angle = self.get_steer(error)
         
-        # self.get_logger().info('count1: %f, count2: %f, count3: %f' % (self.count1, self.count2, self.count3))
+        self.get_logger().info('count1: %f, count2: %f, count3: %f' % (self.count1, self.count2, self.count3))
         self.drive_pub_.publish(message)
 
         # remember to visualize the waypoints
