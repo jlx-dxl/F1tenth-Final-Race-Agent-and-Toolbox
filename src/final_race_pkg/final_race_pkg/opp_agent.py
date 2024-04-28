@@ -17,7 +17,7 @@ from std_msgs.msg import ColorRGBA
 from os.path import join
 
 # get the file path for this package
-csv_loc = '/home/lucien/ESE6150/final_race/curve2.csv'
+csv_loc = '/home/lucien/ESE6150/final_race/curve1.csv'
 
 #  Constants from xacro
 WIDTH = 0.2032  # (m)
@@ -35,8 +35,8 @@ class PurePursuit(Node):
 
         # Params
         # self.declare_parameter('if_real', False)
-        self.declare_parameter('lookahead_distance', 1.5)
-        self.declare_parameter('lookahead_points', 9)      # to calculate yaw diff
+        self.declare_parameter('lookahead_distance', 1.2)
+        self.declare_parameter('lookahead_points', 8)      # to calculate yaw diff
         self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
         self.declare_parameter('L_slope_atten', 0.6)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
 
@@ -171,7 +171,7 @@ class PurePursuit(Node):
 
         # TODO: publish drive message, don't forget to limit the steering angle.
         message = AckermannDriveStamped()
-        message.drive.speed = target_v
+        message.drive.speed = target_v - 2.0
         message.drive.steering_angle = self.get_steer(error)
         # self.get_logger().info('speed: %f, steer: %f' % (target_v, self.get_steer(error)))
         self.drive_pub_.publish(message)

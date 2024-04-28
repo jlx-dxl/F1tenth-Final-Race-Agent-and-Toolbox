@@ -16,7 +16,8 @@ from std_msgs.msg import ColorRGBA
 from .util import *
 
 # get the file path for this package
-csv_loc = '/home/nvidia/f1tenth_ws/curve1.csv'
+# csv_loc = '/home/nvidia/f1tenth_ws/curve1.csv'
+csv_loc = '/home/lucien/ESE6150/final_race/curve_5-7.csv'
 
 #  Constants from xacro
 WIDTH = 0.2032  # (m)
@@ -33,8 +34,8 @@ class PurePursuit(Node):
         super().__init__('pure_pursuit_node')
 
         # Params
-        self.declare_parameter('lookahead_distance', 1.2)
-        self.declare_parameter('lookahead_points', 8)      # to calculate yaw diff
+        self.declare_parameter('lookahead_distance', 1.5)
+        self.declare_parameter('lookahead_points', 12)      # to calculate yaw diff
         self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
         self.declare_parameter('L_slope_atten', 0.7)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
 
@@ -51,7 +52,7 @@ class PurePursuit(Node):
         
         self.declare_parameter('queue_size_filter', 20)   # should be decided by the latency of the system
         self.declare_parameter('queue_size', 10)   # should be decided by the latency of the system
-        self.declare_parameter("speed_bias", -0.5)   # speed bias for following mode
+        self.declare_parameter("speed_bias", 0.0)   # speed bias for following mode
         self.declare_parameter("speed_coefficient", 0.1)   # how much to consider the previous speed when updating speed (larger: less consiferation)
         
         
@@ -62,7 +63,7 @@ class PurePursuit(Node):
         self.integral = 0.0
         self.prev_steer = 0.0
         
-        self.flag = True
+        self.flag = False
         print("if real world test? ", self.flag)
 
         # TODO: Get target x and y from pre-calculated waypoints
@@ -79,8 +80,8 @@ class PurePursuit(Node):
         
         # 这个地图需要被精细建模，后面用于滤掉静态障碍物
         # 初始化代码
-        self.lb = (7.0, 4.5)  # 左下角的物理坐标
-        self.rt = (23.6, 24.0)  # 右上角的物理坐标
+        self.lb = (-5.0, -2.6)  # 左下角的物理坐标
+        self.rt = (9.3, 15.0)  # 右上角的物理坐标
         self.resolution = 0.1
         width = abs(self.lb[0] - self.rt[0]) / self.resolution
         height = abs(self.lb[1] - self.rt[1]) / self.resolution
@@ -89,10 +90,10 @@ class PurePursuit(Node):
         self.grid_ny = int(height)
 
         # 物理坐标阈值
-        x_low = 10.0
-        y_low = 7.5
-        x_high = 20.8
-        y_high = 21.0
+        x_low = -3.84
+        y_low = -1.59
+        x_high = 7.92
+        y_high = 13.6
 
         # 转换为栅格索引
         x_low_idx = int((x_low - self.lb[0]) / self.resolution)
@@ -113,15 +114,14 @@ class PurePursuit(Node):
         self.grid_map[y_high_idx:, :] = 1  # y > 10
         
         # 添加矩形障碍物
-        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (9.3, 13.8), (15.5, 21.0))   # 左上角的
-        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (12.5, 9.5), (18.8, 10.8))   # L弯底边
-        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (17.6, 9.7), (18.7, 17.1))   # L弯竖边
-        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (19.2, 7.1), (21.0, 8.0))    # 右下角
-        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (9.8, 7.3), (11.1, 8.5))   # 左下角
-        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (15.0, 19.0), (21.0, 21.0))   # 顶部
-        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (9.8, 7.3), (20.0, 7.7))   # 底部
-        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (20.8, 7.5), (21.0, 21.0))   # 底部
-        
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (-4.37, 5.30), (2.21, 13.7))   # 左上角的
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (-0.55, 0.99), (5.61, 2.3))   # L弯底边
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (4.57, 1.51), (5.4, 8.64))   # L弯竖边
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (6.35, -1.53), (5.75, -1.06))    # 右下角
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (-4.19, -1.83), (-2.74, 6.08))   # 左下角
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (1.32, 9.74), (8.64, 14.3))   # 顶部
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (-4.19, -1.83), (8.56, -0.69))   # 底部
+        mark_rectangle_on_grid(self.grid_map, self.lb, self.rt, self.resolution, (7.61, -1.83), (8.67, 11.69))   # 底部
         print("finished initializing grid map")
 
         # Topics & Subs, Pubs
