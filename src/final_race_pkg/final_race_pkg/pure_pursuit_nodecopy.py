@@ -12,7 +12,8 @@ from nav_msgs.msg import Odometry
 from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
 from std_msgs.msg import ColorRGBA
-from .util import *
+
+from os.path import join
 
 # get the file path for this package
 csv_loc = '/home/nvidia/f1tenth_ws/curve1.csv'
@@ -20,7 +21,7 @@ csv_loc = '/home/nvidia/f1tenth_ws/curve1.csv'
 #  Constants from xacro
 WIDTH = 0.2032  # (m)
 WHEEL_LENGTH = 0.0381  # (m)
-MAX_STEER = 0.48  # (rad)
+MAX_STEER = 0.36  # (rad)
 
 class PurePursuit(Node):
     """ 
@@ -33,10 +34,21 @@ class PurePursuit(Node):
 
         # Params
         # self.declare_parameter('if_real', False)
-        self.declare_parameter('lookahead_distance', 1.5)
+        self.declare_parameter('lookahead_distance', 2.1)
         self.declare_parameter('lookahead_points', 12)      # to calculate yaw diff
         self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
-        self.declare_parameter('L_slope_atten', 0.7)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
+        self.declare_parameter('L_slope_atten', 0.6)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
+        
+        #self.declare_parameter('lookahead_distance', 1.5)
+        #self.declare_parameter('lookahead_points', 12)      # to calculate yaw diff
+        #self.declare_parameter('lookbehind_points', 2)      # to eliminate the influence of latency
+        #self.declare_parameter('L_slope_atten', 0.7)        # attenuate lookahead distance with large yaw, (larger: smaller L when turning)
+
+        #self.declare_parameter('kp', 0.6)
+        #self.declare_parameter('ki', 0.0)
+        #self.declare_parameter('kd', 0.005)
+        #self.declare_parameter("max_control", MAX_STEER)
+        #self.declare_parameter("steer_alpha", 1.0)
 
         self.declare_parameter('kp', 0.6)
         self.declare_parameter('ki', 0.0)
@@ -86,8 +98,6 @@ class PurePursuit(Node):
         self.waypoint_path_pub_ = self.create_publisher(Marker, waypoint_path_topic, 10)
         print("waypoint_path_pub_ initialized, topic: " + waypoint_path_topic)
         
-########################################### Callback ############################################
-        
     def pose_callback(self, pose_msg):
         if self.flag == True:  
             curr_x = pose_msg.pose.position.x
@@ -100,33 +110,107 @@ class PurePursuit(Node):
         curr_pos = np.array([curr_x, curr_y])
         curr_yaw = math.atan2(2 * (curr_quat.w * curr_quat.z + curr_quat.x * curr_quat.y),
                               1 - 2 * (curr_quat.y ** 2 + curr_quat.z ** 2))
-        
+
+        # find the closest current point
+        # find index of closest point
+        distances = np.linalg.norm(self.xyv_list - curr_pos, axis=1)
+        min_idx = np.argmin(distances)
+        closest_point = self.xyv_list[min_idx, :]
+        print("closest_point: ", closest_point)
         # change L based on another lookahead distance for yaw difference!
         L = self.get_parameter('lookahead_distance').get_parameter_value().double_value
         lookahead_points = self.get_parameter('lookahead_points').get_parameter_value().integer_value
         lookbehind_points = self.get_parameter('lookbehind_points').get_parameter_value().integer_value
-        slope = self.get_parameter('L_slope_atten').get_parameter_value().double_value
-
-        xyv_list = self.xyv_list
-        yaw_list = self.yaw_list
-        v_list = self.v_list
-
-        error, target_v, target_point, curr_target_idx = get_lookahead(curr_pos, curr_yaw, xyv_list, yaw_list, v_list, L, lookahead_points, lookbehind_points, slope)
-
-        self.target_point = target_point
-        self.curr_target_idx = curr_target_idx
         
+        future_yaw_target = self.yaw_list[(min_idx + lookahead_points) % self.yaw_list.shape[0]]
+        past_yaw_target = self.yaw_list[(min_idx - lookbehind_points) % self.yaw_list.shape[0]]
+        yaw_diff = abs(past_yaw_target - future_yaw_target)
+        if yaw_diff > np.pi:
+            yaw_diff = yaw_diff - 2 * np.pi
+        if yaw_diff < -np.pi:
+            yaw_diff = yaw_diff + 2 * np.pi
+        yaw_diff = abs(yaw_diff)
+        L = self.decrease_lookahead(L, yaw_diff)
+        gamma = 2 / L ** 2  # curvature of arc
+        print("eretrwerwe")
+
+        # TODO: find the current waypoint to track using methods mentioned in lecture
+        self.curr_target_idx = min_idx
+        next_idx = min_idx + 1
+        next_dist = distances[next_idx % len(distances)]
+        
+        while (next_dist <= L):
+            min_idx = next_idx
+            next_idx = next_idx + 1
+            next_dist = distances[next_idx % distances.shape[0]]  # avoid hitting the array's end
+        # once points are found, find linear interpolation of them through binary search 
+        # until it's at the right distance L
+        
+        close_point = self.xyv_list[min_idx % distances.shape[0], :]
+        far_point = self.xyv_list[next_idx % distances.shape[0], :]
+        dist_btwn_ends = np.linalg.norm(far_point - close_point)
+        guess_point = self.proj_along(close_point, far_point, dist_btwn_ends / 2)
+        dist_to_guess = np.linalg.norm(curr_pos - guess_point)
+        num_iters = 0
+        print("wefweffwewef")
+        while ((abs(dist_to_guess - L) > 0.01) and num_iters<10000):
+            if (dist_to_guess > L):  # too far away, set the guess point as the far point
+                far_point = guess_point
+                dist_btwn_ends = np.linalg.norm(far_point - close_point)
+                direction = -1  # go backward
+            else:  # too close, set the guess point as the close point
+                close_point = guess_point
+                dist_btwn_ends = np.linalg.norm(far_point - close_point)
+                direction = 1  # go forward
+            # recalculate
+            guess_point = self.proj_along(close_point, far_point, direction * dist_btwn_ends / 2)
+            dist_to_guess = np.linalg.norm(curr_pos - guess_point)
+            num_iters = num_iters + 1
+            print(num_iters)
+        self.target_point = guess_point
+       # print(num_iters)
+        print("asdasd")
+
+        # TODO: transform goal point to vehicle frame of reference
+        R = np.array([[np.cos(curr_yaw), np.sin(curr_yaw)],
+                      [-np.sin(curr_yaw), np.cos(curr_yaw)]])
+        target_x, target_y = R @ np.array([self.target_point[0] - curr_x,
+                                           self.target_point[1] - curr_y])
+        target_v = self.v_list[self.curr_target_idx % len(self.v_list)]
+        # compute error using the lookahead distance
+        error = gamma * target_y
+
         # TODO: publish drive message, don't forget to limit the steering angle.
         message = AckermannDriveStamped()
         message.drive.speed = target_v
         message.drive.steering_angle = self.get_steer(error)
-        self.get_logger().info('speed: %f, steer: %f' % (target_v, self.get_steer(error)))
+        
+        #self.get_logger().info('speed: %f, steer: %f' % (target_v, self.get_steer(error)))
         self.drive_pub_.publish(message)
 
         # remember to visualize the waypoints
         self.visualize_waypoints()
 
-####################################### Visualization ########################################
+
+    # travel a certain distance from one point in the direction of another
+    def proj_along(self, start, target, dist):
+        # find unit vector from start to target
+        vect = target - start
+        if (np.linalg.norm(vect) < 0.0001):
+            return start
+        unit = vect / np.linalg.norm(vect)
+        # travel that distance
+        new_point = dist * unit + start
+        return new_point
+
+    def decrease_lookahead(self, L, yaw_diff):
+        slope = self.get_parameter('L_slope_atten').get_parameter_value().double_value
+        # print(yaw_diff)
+        if (yaw_diff > np.pi / 2):
+            yaw_diff = np.pi / 2
+        L = max(0.5, L * ((np.pi / 2 - yaw_diff * slope) / (np.pi / 2)))
+
+        return L
 
     def visualize_waypoints(self):
         # TODO: publish the waypoints properly
