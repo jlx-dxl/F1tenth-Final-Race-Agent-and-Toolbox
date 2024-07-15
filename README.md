@@ -2,6 +2,10 @@
 
 This repo contains an agent for the F1tenth head-to-head final race, which can track an optimal trajectory and overtake the opponent automatically, and a toolbox which contains an opponent-agent which is a ros2 node called `opp_agent`, and a trajectory generator called `traj_killer`.
 
+### We won the Champion!!!
+
+![ROS node running.png](2.gif)
+
 ## Installation
 
 ### Download the package
@@ -82,6 +86,6 @@ $ ros2 run final_race_pkg main_agent
 $ ros2 run final_race_pkg opp_agent 
 ```
 
-![ROS node running.png](demo.png)
+![ROS node running.png](Toolbox.gif)
 
 
