@@ -82,6 +82,6 @@ $ ros2 run final_race_pkg main_agent
 $ ros2 run final_race_pkg opp_agent 
 ```
 
-![ROS node running.png](https://img2.imgtp.com/2024/04/23/Sbw65zIT.png)
+![ROS node running.png](Screenshot from 2024-04-23 22-42-14.png)
 
 
