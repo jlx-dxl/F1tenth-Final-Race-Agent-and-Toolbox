@@ -86,6 +86,8 @@ $ ros2 run final_race_pkg main_agent
 $ ros2 run final_race_pkg opp_agent 
 ```
 
+## Demo of the Agent and Toolbox
+
 ![ROS node running.png](Toolbox.gif)
 
 
